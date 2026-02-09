@@ -36,7 +36,7 @@ jobs:
               raise SystemExit(0)
 
           # garante que só roda na execução “certa” (porque tem 2 crons)
-          if not (now.hour == 4 and now.minute == 30):
+          if not (now.hour == 20 and now.minute == 30):
               print(f"Skip: Dublin time {now:%H:%M} (not 04:30)")
               raise SystemExit(0)
 
@@ -52,7 +52,7 @@ jobs:
             --abcd_gate_percentis 25,75 \
             --abcd_daily_json abcd_signal.json
 
-      - name: Email only if PA requestsSS=False (include 4 jogos)
+      - name: Email only if PASS=True (include 4 jogos)
         env:
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
@@ -69,14 +69,14 @@ jobs:
               sig = json.load(f)
 
           if not sig.get("gate_pass"):
-              print("PASS=False -> no email")
+              print("PASS=True -> no email")
               raise SystemExit(0)
 
           jogos = sig.get("jogos", {})
           gate = sig.get("gate", {})
 
           body = []
-          body.append("Lotofácil ABCD — GATE PASS = FALSE")
+          body.append("Lotofácil ABCD — GATE PASS = TRUE")
           body.append("")
           body.append(f"Último concurso: {sig.get('last_concurso')} | Data: {sig.get('last_data')}")
           body.append(f"Percentis: {gate.get('percentis')} | Faixa: {gate.get('faixa')} | Gap atual: {gate.get('gap_atual')}")
