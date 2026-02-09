@@ -1,20 +1,15 @@
-name: Lotofacil ABCD Daily Signal
+name: TEST - ABCD Email
 
 on:
-  schedule:
-    # Duas execuções pra cobrir horário de verão/inverno (Dublin)
-    - cron: "30 4 * * *"   # 04:30 UTC -> 04:30 Dublin no inverno
   workflow_dispatch: {}
 
 jobs:
-  abcd:
+  test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
@@ -23,27 +18,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install openpyxl requests
 
-      - name: Guard (run only Mon–Sat at 04:30 Dublin)
-        run: |
-          python - << 'PY'
-          from datetime import datetime
-          from zoneinfo import ZoneInfo
-          now = datetime.now(ZoneInfo("Europe/Dublin"))
-
-          # 0=Mon ... 6=Sun
-          if now.weekday() == 6:
-              print("Skip: Sunday Dublin")
-              raise SystemExit(0)
-
-          # garante que só roda na execução “certa” (porque tem 2 crons)
-          if not (now.hour == 20 and now.minute == 30):
-              print(f"Skip: Dublin time {now:%H:%M} (not 04:30)")
-              raise SystemExit(0)
-
-          print("OK: Mon–Sat 04:30 Dublin")
-          PY
-
-      - name: Run ABCD daily signal (fast)
+      - name: Run ABCD daily signal
         run: |
           python fechamento_simples_v11_54_abcd_gate_plus_FIXED19.py \
             --abcd_daily_signal \
@@ -52,17 +27,15 @@ jobs:
             --abcd_gate_percentis 25,75 \
             --abcd_daily_json abcd_signal.json
 
-      - name: Upload artifacts (signal + xlsx)
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: abcd-run-${{ github.run_id }}
+          name: abcd-test-${{ github.run_id }}
           path: |
             abcd_signal.json
             resultados_*.xlsx
-            simulacao_abcd_gate_*.csv
-          retention-days: 60
 
-      - name: Email only if PASS=True (include 4 jogos)
+      - name: Send TEST email (ignore gate_pass)
         env:
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
@@ -75,19 +48,20 @@ jobs:
           import json, os, smtplib
           from email.mime.text import MIMEText
 
+          # Debug: confirma se secrets chegaram (sem mostrar valores)
+          for k in ["SMTP_HOST","SMTP_PORT","SMTP_USER","SMTP_PASS","SMTP_FROM","SMTP_TO"]:
+              print(k, "OK" if os.environ.get(k) else "MISSING")
+
           with open("abcd_signal.json","r",encoding="utf-8") as f:
               sig = json.load(f)
-
-          if not sig.get("gate_pass"):
-              print("PASS=True -> no email")
-              raise SystemExit(0)
 
           jogos = sig.get("jogos", {})
           gate = sig.get("gate", {})
 
           body = []
-          body.append("Lotofácil ABCD — GATE PASS = TRUE")
+          body.append("TESTE EMAIL ABCD (ignorando gate_pass)")
           body.append("")
+          body.append(f"gate_pass (real): {sig.get('gate_pass')}")
           body.append(f"Último concurso: {sig.get('last_concurso')} | Data: {sig.get('last_data')}")
           body.append(f"Percentis: {gate.get('percentis')} | Faixa: {gate.get('faixa')} | Gap atual: {gate.get('gap_atual')}")
           body.append("")
@@ -99,7 +73,7 @@ jobs:
           body = "\n".join(body)
 
           msg = MIMEText(body, "plain", "utf-8")
-          msg["Subject"] = "Lotofácil ABCD: GATE PASS TRUE"
+          msg["Subject"] = "TESTE - Lotofácil ABCD"
           msg["From"] = os.environ["SMTP_FROM"]
           msg["To"] = os.environ["SMTP_TO"]
 
@@ -108,10 +82,10 @@ jobs:
           user = os.environ["SMTP_USER"]
           pwd  = os.environ["SMTP_PASS"]
 
-          with smtplib.SMTP(host, port) as s:
+          with smtplib.SMTP(host, port, timeout=30) as s:
               s.starttls()
               s.login(user, pwd)
               s.send_message(msg)
 
-          print("Email sent.")
+          print("Email enviado (teste).")
           PY
