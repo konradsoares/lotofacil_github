@@ -21,7 +21,7 @@ jobs:
       - name: Install deps
         run: |
           python -m pip install --upgrade pip
-          pip install openpyxl
+          pip install openpyxl requests
 
       - name: Guard (run only Mon–Sat at 04:30 Dublin)
         run: |
@@ -52,7 +52,7 @@ jobs:
             --abcd_gate_percentis 25,75 \
             --abcd_daily_json abcd_signal.json
 
-      - name: Email only if PASS=True (include 4 jogos)
+      - name: Email only if PA requestsSS=False (include 4 jogos)
         env:
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
@@ -76,7 +76,7 @@ jobs:
           gate = sig.get("gate", {})
 
           body = []
-          body.append("Lotofácil ABCD — GATE PASS = TRUE")
+          body.append("Lotofácil ABCD — GATE PASS = FALSE")
           body.append("")
           body.append(f"Último concurso: {sig.get('last_concurso')} | Data: {sig.get('last_data')}")
           body.append(f"Percentis: {gate.get('percentis')} | Faixa: {gate.get('faixa')} | Gap atual: {gate.get('gap_atual')}")
