@@ -1,15 +1,20 @@
-name: TEST - ABCD Email
+name: Lotofacil ABCD Prod (Dublin 04:30)
 
 on:
+  schedule:
+    # DST-safe: roda 03:30 UTC (verão) e 04:30 UTC (inverno)
+    - cron: "30 4 * * *"
   workflow_dispatch: {}
 
 jobs:
-  test:
+  abcd:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
@@ -18,7 +23,28 @@ jobs:
           python -m pip install --upgrade pip
           pip install openpyxl requests
 
-      - name: Run ABCD daily signal
+      - name: Guard (Mon–Sat, exactly 04:30 Dublin)
+        id: guard
+        run: |
+          python - << 'PY'
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+
+          now = datetime.now(ZoneInfo("Europe/Dublin"))
+          # Sunday skip (0=Mon ... 6=Sun)
+          if now.weekday() == 6:
+              ok = False
+          else:
+              ok = (now.hour == 4 and now.minute == 30)
+
+          print(f"Dublin now: {now:%Y-%m-%d %H:%M} | should_run={ok}")
+
+          with open("${GITHUB_OUTPUT}", "a", encoding="utf-8") as f:
+              f.write(f"should_run={'true' if ok else 'false'}\n")
+          PY
+
+      - name: Run ABCD daily signal (fast)
+        if: steps.guard.outputs.should_run == 'true'
         run: |
           python fechamento_simples_v11_54_abcd_gate_plus_FIXED19.py \
             --abcd_daily_signal \
@@ -27,15 +53,42 @@ jobs:
             --abcd_gate_percentis 25,75 \
             --abcd_daily_json abcd_signal.json
 
+      - name: Decide if gate_pass is True
+        if: steps.guard.outputs.should_run == 'true'
+        id: gate
+        run: |
+          python - << 'PY'
+          import json
+          with open("abcd_signal.json","r",encoding="utf-8") as f:
+              sig = json.load(f)
+          gate_pass = bool(sig.get("gate_pass"))
+          print("gate_pass=", gate_pass)
+          with open("${GITHUB_OUTPUT}", "a", encoding="utf-8") as g:
+              g.write(f"gate_pass={'true' if gate_pass else 'false'}\n")
+          PY
+
+      - name: Run ABCD backtest + CSV (ONLY when PASS=True)
+        if: steps.guard.outputs.should_run == 'true' && steps.gate.outputs.gate_pass == 'true'
+        run: |
+          python fechamento_simples_v11_54_abcd_gate_plus_FIXED19.py \
+            --simular_abcd_gate \
+            --abcd_teimosinha_n 37 \
+            --abcd_min_hits 14 \
+            --abcd_gate_percentis 25,75
+
       - name: Upload artifacts
+        if: steps.guard.outputs.should_run == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: abcd-test-${{ github.run_id }}
+          name: abcd-prod-${{ github.run_id }}
           path: |
             abcd_signal.json
             resultados_*.xlsx
+            simulacao_abcd_gate_*.csv
+          retention-days: 60
 
-      - name: Send TEST email (ignore gate_pass)
+      - name: Email only if PASS=True
+        if: steps.guard.outputs.should_run == 'true' && steps.gate.outputs.gate_pass == 'true'
         env:
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
@@ -48,31 +101,25 @@ jobs:
           import json, os, smtplib
           from email.mime.text import MIMEText
 
-          # Debug: confirma se secrets chegaram (sem mostrar valores)
-          for k in ["SMTP_HOST","SMTP_PORT","SMTP_USER","SMTP_PASS","SMTP_FROM","SMTP_TO"]:
-              print(k, "OK" if os.environ.get(k) else "MISSING")
-
           with open("abcd_signal.json","r",encoding="utf-8") as f:
               sig = json.load(f)
 
-          jogos = sig.get("jogos", {})
-          gate = sig.get("gate", {})
+          jogos = sig.get("jogos", {}) or {}
+          gate  = sig.get("gate", {}) or {}
 
           body = []
-          body.append("TESTE EMAIL ABCD (ignorando gate_pass)")
+          body.append("Lotofácil ABCD — GATE PASS = TRUE")
           body.append("")
-          body.append(f"gate_pass (real): {sig.get('gate_pass')}")
           body.append(f"Último concurso: {sig.get('last_concurso')} | Data: {sig.get('last_data')}")
           body.append(f"Percentis: {gate.get('percentis')} | Faixa: {gate.get('faixa')} | Gap atual: {gate.get('gap_atual')}")
           body.append("")
-          body.append("4 jogos (15 dezenas):")
           body.append("Jogos retornados pelo JSON:")
-          for k, v in (sig.get("jogos", {}) or {}).items():
+          for k, v in jogos.items():
               body.append(f"{k}: {v}")
           body = "\n".join(body)
 
           msg = MIMEText(body, "plain", "utf-8")
-          msg["Subject"] = "TESTE - Lotofácil ABCD"
+          msg["Subject"] = "Lotofácil ABCD: GATE PASS TRUE"
           msg["From"] = os.environ["SMTP_FROM"]
           msg["To"] = os.environ["SMTP_TO"]
 
@@ -86,5 +133,5 @@ jobs:
               s.login(user, pwd)
               s.send_message(msg)
 
-          print("Email enviado (teste).")
+          print("Email sent.")
           PY
