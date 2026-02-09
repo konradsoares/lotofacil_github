@@ -66,10 +66,9 @@ jobs:
           body.append(f"Percentis: {gate.get('percentis')} | Faixa: {gate.get('faixa')} | Gap atual: {gate.get('gap_atual')}")
           body.append("")
           body.append("4 jogos (15 dezenas):")
-          for k in ["AB","AC","AD","BCD"]:
-              v = jogos.get(k)
-              if v:
-                  body.append(f"{k}: {v}")
+          body.append("Jogos retornados pelo JSON:")
+          for k, v in (sig.get("jogos", {}) or {}).items():
+              body.append(f"{k}: {v}")
           body = "\n".join(body)
 
           msg = MIMEText(body, "plain", "utf-8")
