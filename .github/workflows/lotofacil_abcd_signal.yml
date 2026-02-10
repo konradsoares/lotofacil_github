@@ -71,6 +71,11 @@ jobs:
           grep '^should_run=' guard_out.txt >> "$GITHUB_OUTPUT"
           grep '^reason=' guard_out.txt >> "$GITHUB_OUTPUT"
 
+      - name: Debug guard outputs
+        run: |
+          echo "guard.should_run='${{ steps.guard.outputs.should_run }}'"
+          echo "guard.reason='${{ steps.guard.outputs.reason }}'"          
+
       - name: Ensure docs default files exist
         if: steps.guard.outputs.should_run == 'true'
         run: |
@@ -80,10 +85,6 @@ jobs:
             { "version": 1, "updated_at": null, "campaigns": [] }
             EOF
           fi
-      - name: Debug guard outputs
-        run: |
-          echo "guard.should_run='${{ steps.guard.outputs.should_run }}'"
-          echo "guard.reason='${{ steps.guard.outputs.reason }}'"
 
       - name: Run ABCD runner (daily snapshot + campaigns)
         if: steps.guard.outputs.should_run == 'true'
