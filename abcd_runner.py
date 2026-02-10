@@ -59,6 +59,7 @@ class Draw:
     concurso: int
     data: date
     dezenas: Tuple[int, ...]  # sorted 15 nums
+    rateios: Dict[int, float]  # {11..15: valor}
 
     @property
     def set(self) -> Set[int]:
@@ -93,6 +94,27 @@ def _parse_date_br(s: object) -> Optional[date]:
         return date(y, mo, d)
     return None
 
+
+def _parse_money_br(v: object) -> float:
+    """Converte 'R$49.765,82' / '49.765,82' / 10 / None em float."""
+    if v is None:
+        return 0.0
+    if isinstance(v, (int, float)):
+        return float(v)
+    s = str(v).strip()
+    if not s:
+        return 0.0
+    # remove prefixo e espaços
+    s = s.replace("R$", "").replace("r$", "").strip()
+    # remove separador de milhar '.' e troca ',' por '.'
+    s = s.replace(".", "").replace(",", ".")
+    # remove qualquer coisa não numérica (mantém . e -)
+    s = re.sub(r"[^0-9.\-]", "", s)
+    try:
+        return float(s) if s else 0.0
+    except Exception:
+        return 0.0
+
 def _find_header_row(ws, max_scan_rows: int = 25) -> Tuple[int, Dict[str, int]]:
     """
     Encontra header robustamente: Concurso + Bola1..Bola15 (ou Dezena1..Dezena15).
@@ -126,6 +148,14 @@ def _find_header_row(ws, max_scan_rows: int = 25) -> Tuple[int, Dict[str, int]]:
                 out["data"] = data_col
             for i in range(1, 16):
                 out[f"bola{i}"] = pick(f"bola{i}", f"dezena{i}") or (2 + i)
+
+            # rateios (se existirem)
+            # nomes comuns: "Rateio 11 acertos" => rateio11acertos
+            for k in range(11, 16):
+                col = pick(f"rateio{k}acertos", f"rateio{k}acerto", f"rateio{k}")
+                if col:
+                    out[f"rateio{k}"] = col
+
             return r, out
 
     # debug
@@ -213,11 +243,27 @@ def load_draws_from_xlsx(path: str, sheet_preference: str = "LOTOFÁCIL") -> Lis
 
         if ok:
             dezenas_sorted = tuple(sorted(dezenas))
-            draws.append(Draw(concurso=concurso, data=d, dezenas=dezenas_sorted))
+            rateios: Dict[int, float] = {}
+            for k in range(11, 16):
+                ck = cols.get(f"rateio{k}")
+                if ck:
+                    rateios[k] = _parse_money_br(ws.cell(r, ck).value)
+            draws.append(Draw(concurso=concurso, data=d, dezenas=dezenas_sorted, rateios=rateios))
 
         r += 1
 
-    draws.sort(key=lambda x: x.concurso)
+    
+def payout_for_hits(draw: Draw, hits: int) -> float:
+    return float(draw.rateios.get(hits, 0.0))
+
+def infer_aposta15_custo(draw: Draw, fallback: float = 3.50) -> float:
+    # Regra do seu projeto: prêmio de 11 acertos = 2x valor da aposta (15 dezenas)
+    v11 = draw.rateios.get(11)
+    if v11 and v11 > 0:
+        return float(v11) / 2.0
+    return float(fallback)
+
+draws.sort(key=lambda x: x.concurso)
     return draws
 
 
@@ -355,51 +401,91 @@ def _percentile(values: List[int], p: float) -> float:
     d1 = xs[c] * (k - f)
     return float(d0 + d1)
 
-def compute_gate(draws: List[Draw], percentis: Tuple[float, float], overlap_event: int = 9) -> Dict[str, object]:
+
+def compute_abcd_gate_stats(
+    draws: List[Draw],
+    janela_recente: int,
+    teimosinha_n: int,
+    min_hits: int,
+    gate_percentis: Tuple[float, float],
+) -> Dict[str, object]:
     """
-    Gate por gap (em concursos) baseado em eventos de overlap entre concursos consecutivos.
-    Evento ocorre quando overlap >= overlap_event.
+    Replica a lógica do seu v18:
 
-    gap_atual = concursos desde o último evento.
-    faixa = [P_low, P_high] dos gaps históricos (>=1).
-    PASS se gap_atual estiver dentro da faixa (inclusive).
+    - walk-forward: para cada i, gera 4 jogos ABCD usando histórico draws[:i]
+    - simula teimosinha_n concursos (i..i+teimosinha_n-1) jogando os 4 jogos
+    - sucesso do "dia i" = profit_total > 0.0 (payout_total - custo_total)
+    - gaps = diferenças entre índices de sucessos
+    - gap_atual = last_eval_idx - last_succ, onde last_eval_idx = len(draws) - teimosinha_n
+    - gate PASS se gap_atual estiver entre [P_low, P_high] (inclusive)
     """
-    if len(draws) < 3:
-        return {"gate_pass": False, "gap_atual": 0, "lo": 0.0, "hi": 0.0, "percentis": percentis}
+    if len(draws) < 10:
+        return {"gate": {"pass": False, "reason": "Poucos concursos"}, "gaps": [], "gap_atual": None, "lo": 0.0, "hi": 0.0}
 
-    # eventos
-    event_indices = []
-    for i in range(1, len(draws)):
-        ov = len(draws[i].set & draws[i-1].set)
-        if ov >= overlap_event:
-            event_indices.append(i)
-
+    success_idx: List[int] = []
     gaps: List[int] = []
-    for j in range(1, len(event_indices)):
-        gaps.append(event_indices[j] - event_indices[j-1])
 
-    # gap atual
-    if not event_indices:
-        gap_atual = len(draws) - 1
-    else:
-        gap_atual = (len(draws) - 1) - event_indices[-1]
+    # varre todos os dias elegíveis (precisa de i+r existir)
+    last_start = len(draws) - (teimosinha_n - 1)
+    for i in range(1, last_start):
+        history = draws[:i]
+        games = build_abcd_games(history, janela_recente=janela_recente)
 
-    p_low, p_high = percentis
-    lo = _percentile(gaps, p_low)
-    hi = _percentile(gaps, p_high)
-    gate_pass = (gap_atual >= lo) and (gap_atual <= hi)
+        total_cost = 0.0
+        total_payout = 0.0
+
+        for r in range(teimosinha_n):
+            alvo = draws[i + r]
+            custo15 = infer_aposta15_custo(alvo, fallback=3.50)
+            total_cost += 4.0 * custo15  # 4 jogos (AB/AC/AD/BCD)
+            alvo_set = alvo.set
+
+            payout_r = 0.0
+            for jogo in games.values():
+                k = len(set(jogo) & alvo_set)
+                if k >= min_hits:
+                    payout_r += payout_for_hits(alvo, k)
+            total_payout += payout_r
+
+        if (total_payout - total_cost) > 0.0:
+            success_idx.append(i)
+
+    for a, b in zip(success_idx[:-1], success_idx[1:]):
+        gaps.append(b - a)
+
+    if not gaps:
+        return {"gate": {"pass": False, "reason": "Sem sucessos suficientes"}, "gaps": [], "gap_atual": None, "lo": 0.0, "hi": 0.0}
+
+    p_low, p_high = gate_percentis
+    lo = float(_percentile(gaps, p_low))
+    hi = float(_percentile(gaps, p_high))
+
+    last_eval_idx = len(draws) - teimosinha_n
+    last_succ = None
+    for idx_s in reversed(success_idx):
+        if idx_s <= last_eval_idx:
+            last_succ = idx_s
+            break
+
+    gap_now = (last_eval_idx - last_succ) if last_succ is not None else None
+    gate_pass = False
+    if gap_now is not None:
+        gate_pass = (gap_now >= lo and gap_now <= hi)
 
     return {
-        "metric": "concursos",
-        "percentis": [float(p_low), float(p_high)],
-        "lo": float(lo),
-        "hi": float(hi),
-        "gap_atual": int(gap_atual),
-        "gate_pass": bool(gate_pass),
-        "event_overlap": overlap_event,
-        "events": len(event_indices),
-        "samples": len(gaps),
+        "gate": {
+            "metric": "concursos",
+            "percentis": gate_percentis,
+            "faixa": (round(lo, 2), round(hi, 2)),
+            "gap_atual": gap_now,
+            "pass": bool(gate_pass),
+        },
+        "gaps": gaps,
+        "gap_atual": gap_now,
+        "lo": lo,
+        "hi": hi,
     }
+
 
 def _hits(game: List[int], draw: Draw) -> int:
     return len(set(game) & draw.set)
@@ -617,7 +703,14 @@ def main() -> int:
     print(f"Último concurso: {last.concurso} | Data: {last.data.isoformat()}")
 
     percentis = _parse_percentiles(args.gate_percentis, default=(25.0, 75.0))
-    gate = compute_gate(draws, percentis=percentis, overlap_event=int(args.overlap_event))
+    stats_gate = compute_abcd_gate_stats(
+        draws=draws,
+        janela_recente=200,
+        teimosinha_n=int(args.teimosinha),
+        min_hits=int(args.min_hits_stop),
+        gate_percentis=percentis,
+    )
+    gate = stats_gate.get("gate", {})
     print(f"[GATE ABCD] metric=concursos | percentis={tuple(gate['percentis'])} | faixa=({gate['lo']}, {gate['hi']}) conc | gap_atual={gate['gap_atual']} conc | PASS={gate['gate_pass']}")
 
     games = build_abcd_games(draws)
