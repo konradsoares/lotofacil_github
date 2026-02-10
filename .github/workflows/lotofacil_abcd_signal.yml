@@ -31,8 +31,9 @@ jobs:
 
       - name: Guard (Mon–Sat, >= 04:30 Dublin, once per day)
         id: guard
+        shell: bash
         run: |
-          python - << 'PY'
+          python - << 'PY' > guard_out.txt
           import json
           from datetime import datetime
           from zoneinfo import ZoneInfo
@@ -41,7 +42,6 @@ jobs:
           now = datetime.now(ZoneInfo("Europe/Dublin"))
           today = now.strftime("%Y-%m-%d")
 
-          # Sunday skip
           if now.weekday() == 6:
               ok = False
               reason = "Sunday"
@@ -49,7 +49,6 @@ jobs:
               ok = (now.hour > 4) or (now.hour == 4 and now.minute >= 30)
               reason = "before_04_30" if not ok else "time_ok"
 
-          # once per day (uses repo file committed in docs/state)
           stamp_path = Path("docs/state/abcd_last_run.json")
           last = None
           if stamp_path.exists():
@@ -63,11 +62,14 @@ jobs:
               reason = f"already_ran_today ({today})"
 
           print(f"Dublin now: {now:%Y-%m-%d %H:%M} | last_run={last} | should_run={ok} | reason={reason}")
-
-          with open("${GITHUB_OUTPUT}", "a", encoding="utf-8") as f:
-              f.write(f"should_run={'true' if ok else 'false'}\n")
-              f.write(f"reason={reason}\n")
+          print("should_run=" + ("true" if ok else "false"))
+          print("reason=" + reason)
           PY
+
+          cat guard_out.txt
+          # pega as linhas should_run= e reason= e escreve no output
+          grep '^should_run=' guard_out.txt >> "$GITHUB_OUTPUT"
+          grep '^reason=' guard_out.txt >> "$GITHUB_OUTPUT"
 
       - name: Ensure docs default files exist
         if: steps.guard.outputs.should_run == 'true'
@@ -78,6 +80,10 @@ jobs:
             { "version": 1, "updated_at": null, "campaigns": [] }
             EOF
           fi
+      - name: Debug guard outputs
+        run: |
+          echo "guard.should_run='${{ steps.guard.outputs.should_run }}'"
+          echo "guard.reason='${{ steps.guard.outputs.reason }}'"
 
       - name: Run ABCD runner (daily snapshot + campaigns)
         if: steps.guard.outputs.should_run == 'true'
