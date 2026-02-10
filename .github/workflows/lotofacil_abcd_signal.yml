@@ -84,6 +84,25 @@ jobs:
             printf '{ "version": 1, "updated_at": null, "campaigns": [] }\n' > docs/state/abcd_campaigns.json
           fi
 
+      - name: Debug XLSX structure
+        if: steps.guard.outputs.should_run == 'true'
+        run: |
+          python - << 'PY'
+          from openpyxl import load_workbook
+          import glob
+
+          xlsx = sorted(glob.glob("resultados_*.xlsx"))[-1]
+          wb = load_workbook(xlsx, data_only=True)
+          print("XLSX:", xlsx)
+          print("Sheets:", wb.sheetnames)
+
+          for name in wb.sheetnames[:3]:
+            ws = wb[name]
+            print("\n=== SHEET:", name, "===")
+            for r in range(1, 8):
+              row = [ws.cell(r,c).value for c in range(1, 20)]
+              print(r, row)
+          PY
       - name: Run ABCD runner (daily snapshot + campaigns)
         if: steps.guard.outputs.should_run == 'true'
         run: |
