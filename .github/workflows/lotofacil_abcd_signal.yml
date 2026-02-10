@@ -1,9 +1,9 @@
-name: Lotofacil ABCD (Prod) — Dublin 04:30
+name: Lotofacil ABCD (Prod) — Dublin >= 04:30
 
 on:
   schedule:
-    # DST-safe: roda 03:30 UTC (verão) e 04:30 UTC (inverno)
-    - cron: "30 4 * * *"
+    # 06:00 UTC (não é "Dublin fixo" em DST, por isso o guard usa Europe/Dublin)
+    - cron: "0 6 * * *"
   workflow_dispatch: {}
 
 permissions:
@@ -29,30 +29,80 @@ jobs:
           python -m pip install --upgrade pip
           pip install openpyxl requests
 
-      - name: Guard (Mon–Sat, exactly 04:30 Dublin)
+      - name: Guard (Mon–Sat, >= 04:30 Dublin, once per day)
         id: guard
         run: |
           python - << 'PY'
+          import json
           from datetime import datetime
           from zoneinfo import ZoneInfo
+          from pathlib import Path
 
           now = datetime.now(ZoneInfo("Europe/Dublin"))
+          today = now.strftime("%Y-%m-%d")
+
           # Sunday skip
           if now.weekday() == 6:
               ok = False
+              reason = "Sunday"
           else:
-              ok = (now.hour == 4 and now.minute == 30)
+              ok = (now.hour > 4) or (now.hour == 4 and now.minute >= 30)
+              reason = "before_04_30" if not ok else "time_ok"
 
-          print(f"Dublin now: {now:%Y-%m-%d %H:%M} | should_run={ok}")
+          # once per day (uses repo file committed in docs/state)
+          stamp_path = Path("docs/state/abcd_last_run.json")
+          last = None
+          if stamp_path.exists():
+              try:
+                  last = json.loads(stamp_path.read_text(encoding="utf-8")).get("last_run_dublin_date")
+              except Exception:
+                  last = None
+
+          if ok and last == today:
+              ok = False
+              reason = f"already_ran_today ({today})"
+
+          print(f"Dublin now: {now:%Y-%m-%d %H:%M} | last_run={last} | should_run={ok} | reason={reason}")
 
           with open("${GITHUB_OUTPUT}", "a", encoding="utf-8") as f:
               f.write(f"should_run={'true' if ok else 'false'}\n")
+              f.write(f"reason={reason}\n")
           PY
+
+      - name: Ensure docs default files exist
+        if: steps.guard.outputs.should_run == 'true'
+        run: |
+          mkdir -p docs/state docs/results
+          if [ ! -f docs/state/abcd_campaigns.json ]; then
+            cat > docs/state/abcd_campaigns.json << 'EOF'
+            { "version": 1, "updated_at": null, "campaigns": [] }
+            EOF
+          fi
 
       - name: Run ABCD runner (daily snapshot + campaigns)
         if: steps.guard.outputs.should_run == 'true'
         run: |
           python abcd_runner.py --teimosinha 37 --min_hits_stop 14 --gate_percentis 25,75
+
+      - name: Stamp last run (Dublin date)
+        if: steps.guard.outputs.should_run == 'true'
+        run: |
+          python - << 'PY'
+          import json
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          from pathlib import Path
+
+          now = datetime.now(ZoneInfo("Europe/Dublin"))
+          today = now.strftime("%Y-%m-%d")
+
+          Path("docs/state").mkdir(parents=True, exist_ok=True)
+          Path("docs/state/abcd_last_run.json").write_text(
+              json.dumps({"last_run_dublin_date": today, "last_run_dublin_time": now.strftime("%H:%M")}, indent=2),
+              encoding="utf-8"
+          )
+          print("Stamped:", today)
+          PY
 
       - name: Build manifest.json for docs/results
         if: steps.guard.outputs.should_run == 'true'
@@ -68,27 +118,24 @@ jobs:
           for p in sorted(root.rglob("*.json")):
             if p.name == "manifest.json":
               continue
-            # esperamos formato docs/results/YYYY/MM/YYYY-MM-DD.json
             try:
               label = p.stem  # YYYY-MM-DD
-              # path relativo ao docs/
               rel = p.relative_to(Path("docs"))
               days.append({"label": label, "path": "./" + str(rel).replace("\\","/")})
             except Exception:
               pass
 
-          out = {"days": days}
-          (root / "manifest.json").write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
+          (root / "manifest.json").write_text(json.dumps({"days": days}, ensure_ascii=False, indent=2), encoding="utf-8")
           print("manifest days:", len(days))
           PY
-          
+
       - name: Commit docs updates
         if: steps.guard.outputs.should_run == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          git add docs/
+          git add docs/ abcd_signal.json runner_out.json email_body.txt resultados_*.xlsx simulacao_abcd_gate_*.csv || true
 
           git diff --cached --quiet && echo "No changes to commit" && exit 0
           git commit -m "ABCD: daily snapshot + campaigns"
