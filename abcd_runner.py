@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import subprocess
 from dataclasses import dataclass
@@ -13,6 +12,13 @@ from typing import Dict, List, Optional, Set, Tuple
 
 from openpyxl import load_workbook
 
+# This runner delegates ALL ABCD logic (including gate calculation) to the main script,
+# and only:
+# - writes a daily snapshot into docs/results/YYYY/MM/YYYY-MM-DD.json
+# - maintains campaign state in docs/state/abcd_campaigns.json
+# - creates email_body.txt when there is something to email (new campaign, active reminders, win/expire)
+#
+# It is intentionally "dumb" about the gate to avoid drift vs your validated v18/v19 logic.
 
 SCRIPT = "fechamento_simples_v11_54_abcd_gate_plus_FIXED19.py"
 
@@ -23,7 +29,7 @@ STATE_PATH = STATE_DIR / "abcd_campaigns.json"
 
 EMAIL_BODY_PATH = Path("email_body.txt")
 
-# -------- XLSX parsing (CAIXA download format is stable enough) --------
+# -------- XLSX parsing (CAIXA download format) --------
 
 def _norm_header(s: str) -> str:
     s = (s or "").strip().lower()
@@ -36,30 +42,29 @@ def _find_header_row(ws) -> Tuple[int, Dict[str, int]]:
     Returns (row_index_1based, col_map) where col_map keys:
       concurso, data, b1..b15
     """
-    # Search first 50 rows for a plausible header
     for r in range(1, 51):
         row = [ws.cell(row=r, column=c).value for c in range(1, 60)]
         norm = [_norm_header(str(v)) if v is not None else "" for v in row]
 
-        # Concurso col
         try:
             c_conc = norm.index("concurso") + 1
         except ValueError:
             continue
 
-        # Data col (sometimes "data sorteio" or "data")
         c_date = None
         for cand in ("data sorteio", "data"):
             if cand in norm:
                 c_date = norm.index(cand) + 1
                 break
 
-        # ball cols: "bola 1".."bola 15" OR "b 1" etc.
-        ball_cols = {}
+        ball_cols: Dict[str, int] = {}
         for i in range(1, 16):
+            # real file uses "Bola1"..."Bola15" (no space) -> normalized becomes "bola1"
             patterns = [
+                f"bola{i}",
                 f"bola {i}",
                 f"bolas {i}",
+                f"dezena{i}",
                 f"dezena {i}",
                 f"{i}ª dezena",
                 f"b{i}",
@@ -92,11 +97,7 @@ class Draw:
 
 def load_draws_from_xlsx(xlsx_path: str, sheet_name: str = "LOTOFÁCIL") -> List[Draw]:
     wb = load_workbook(xlsx_path, data_only=True)
-    if sheet_name not in wb.sheetnames:
-        # fallback: first sheet
-        ws = wb[wb.sheetnames[0]]
-    else:
-        ws = wb[sheet_name]
+    ws = wb[sheet_name] if sheet_name in wb.sheetnames else wb[wb.sheetnames[0]]
 
     header_row, cols = _find_header_row(ws)
 
@@ -112,7 +113,6 @@ def load_draws_from_xlsx(xlsx_path: str, sheet_name: str = "LOTOFÁCIL") -> List
             r += 1
             continue
 
-        # date
         dval = ws.cell(row=r, column=cols.get("data", cols["concurso"] + 1)).value if "data" in cols else None
         data_str = None
         if isinstance(dval, datetime):
@@ -120,13 +120,9 @@ def load_draws_from_xlsx(xlsx_path: str, sheet_name: str = "LOTOFÁCIL") -> List
         elif isinstance(dval, date):
             data_str = dval.isoformat()
         elif isinstance(dval, str) and dval.strip():
-            # may be "07/02/2026"
             s = dval.strip()
             m = re.match(r"^(\d{2})/(\d{2})/(\d{4})$", s)
-            if m:
-                data_str = f"{m.group(3)}-{m.group(2)}-{m.group(1)}"
-            else:
-                data_str = s
+            data_str = f"{m.group(3)}-{m.group(2)}-{m.group(1)}" if m else s
 
         nums: Set[int] = set()
         ok = True
@@ -176,7 +172,7 @@ def write_daily_snapshot(sig: Dict, ymd: str) -> Path:
     outpath.write_text(json.dumps(sig, ensure_ascii=False, indent=2), encoding="utf-8")
     return outpath
 
-# -------- logic --------
+# -------- helpers --------
 
 def parse_args() -> argparse.Namespace:
     ap = argparse.ArgumentParser()
@@ -185,10 +181,10 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument("--gate_percentis", type=str, default="25,75")
     ap.add_argument("--script", type=str, default=SCRIPT)
     ap.add_argument("--xlsx", type=str, default="", help="Opcional: path fixo do XLSX (senão usa auto do script).")
+    ap.add_argument("--force_email", action="store_true", help="Força gerar email_body.txt mesmo se gate_pass=False e sem campanhas.")
     return ap.parse_args()
 
 def run_daily_signal(script: str, teimosinha: int, min_hits_stop: int, gate_percentis: str) -> Dict:
-    # Gera abcd_signal.json via seu script
     cmd = [
         "python", script,
         "--abcd_daily_signal",
@@ -201,13 +197,11 @@ def run_daily_signal(script: str, teimosinha: int, min_hits_stop: int, gate_perc
     return json.loads(Path("abcd_signal.json").read_text(encoding="utf-8"))
 
 def find_latest_xlsx() -> Optional[str]:
-    # pega o resultados_*.xlsx mais recente no diretório atual
     files = sorted(Path(".").glob("resultados_*.xlsx"), key=lambda p: p.stat().st_mtime, reverse=True)
     return str(files[0]) if files else None
 
 def parse_game_nums(s: str) -> Set[int]:
-    # "02 05 06 ..." -> {2,5,6,...}
-    nums = set()
+    nums: Set[int] = set()
     for tok in re.split(r"[,\s]+", (s or "").strip()):
         if not tok:
             continue
@@ -222,10 +216,7 @@ def compute_hits(game: Set[int], draw_nums: Set[int]) -> int:
 
 def check_campaign_against_draw(camp: Dict, draw: Draw) -> Dict:
     jogos = camp.get("jogos", {}) or {}
-    # normalize: accept any keys/values in JSON
-    parsed_games: List[Tuple[str, Set[int]]] = []
-    for k, v in jogos.items():
-        parsed_games.append((str(k), parse_game_nums(str(v))))
+    parsed_games: List[Tuple[str, Set[int]]] = [(str(k), parse_game_nums(str(v))) for k, v in jogos.items()]
 
     best_hits = -1
     best_key = None
@@ -246,10 +237,7 @@ def check_campaign_against_draw(camp: Dict, draw: Draw) -> Dict:
     }
 
 def already_checked(camp: Dict, concurso: int) -> bool:
-    for chk in camp.get("checks", []) or []:
-        if chk.get("concurso") == concurso:
-            return True
-    return False
+    return any((chk.get("concurso") == concurso) for chk in (camp.get("checks", []) or []))
 
 def within_offset_window(camp: Dict, concurso: int) -> bool:
     start = int(camp["target_start_concurso"])
@@ -260,9 +248,15 @@ def within_offset_window(camp: Dict, concurso: int) -> bool:
 def checks_done_in_window(camp: Dict) -> int:
     return len(camp.get("checks", []) or [])
 
+def _fmt_games_block(jogos: Dict) -> List[str]:
+    out = []
+    for k, v in (jogos or {}).items():
+        out.append(f"  {k}: {v}")
+    return out
+
 def build_email_digest(
     sig: Dict,
-    today_ymd: str,
+    run_ymd: str,
     latest_draw: Draw,
     opened: List[Dict],
     updates: List[Dict],
@@ -272,27 +266,38 @@ def build_email_digest(
 ) -> str:
     gate = sig.get("gate", {}) or {}
 
-    lines = []
+    lines: List[str] = []
     lines.append("Lotofácil ABCD — Resumo Diário")
     lines.append("")
-    lines.append(f"Rodado em (Dublin 04:30): {today_ymd}")
+    lines.append(f"Rodado em (Dublin 04:30+): {run_ymd}")
     lines.append(f"Último concurso disponível: {latest_draw.concurso} | Data: {latest_draw.data}")
     lines.append("")
     lines.append(f"gate_pass (hoje): {sig.get('gate_pass')}")
     lines.append(f"Percentis: {gate.get('percentis')} | Faixa: {gate.get('faixa')} | Gap atual: {gate.get('gap_atual')}")
     lines.append("")
 
+    # always show today's suggested games (from daily JSON)
+    lines.append("=== JOGOS DO SINAL DE HOJE (JSON) ===")
+    jogos_hoje = sig.get("jogos", {}) or {}
+    if jogos_hoje:
+        lines.extend(_fmt_games_block(jogos_hoje))
+    else:
+        lines.append("  (nenhum jogo encontrado no JSON)")
+    lines.append("")
+
     if opened:
         lines.append("=== NOVAS CAMPANHAS ABERTAS HOJE ===")
         for c in opened:
-            lines.append(f"- {c['id']} | start={c['start_concurso']} -> alvo_início={c['target_start_concurso']} | teimosinha={c['teimosinha_n']}")
+            lines.append(f"- {c['id']} | start={c['start_concurso']} -> alvo_início={c['target_start_concurso']} | teimosinha={c['teimosinha_n']} | stop_hits={c['min_hits_stop']}")
+            lines.append("  Jogos:")
+            lines.extend(_fmt_games_block(c.get("jogos", {}) or {}))
         lines.append("")
 
     if won:
-        lines.append("=== CAMPANHAS ENCERRADAS (GANHOU >=14) ===")
+        lines.append("=== CAMPANHAS ENCERRADAS (GANHOU >= stop_hits) ===")
         for c in won:
             w = c.get("won", {}) or {}
-            lines.append(f"- {c['id']} | start={c['start_concurso']} | ganhou no concurso {w.get('when_concurso')} com {w.get('best_hits')} hits")
+            lines.append(f"- {c['id']} | start={c['start_concurso']} | ganhou no concurso {w.get('when_concurso')} com {w.get('best_hits')} hits ({w.get('best_game')})")
         lines.append("")
 
     if expired:
@@ -304,13 +309,12 @@ def build_email_digest(
     if updates:
         lines.append("=== CHECKS DE HOJE (por campanha) ===")
         for u in updates:
-            cid = u["id"]
             chk = u["check"]
-            lines.append(f"- {cid} | concurso {chk['concurso']} | best_hits={chk['best_hits']} | best_game={chk['best_game']}")
+            lines.append(f"- {u['id']} | concurso {chk['concurso']} | best_hits={chk['best_hits']} | best_game={chk['best_game']}")
         lines.append("")
 
     if active:
-        lines.append("=== CAMPANHAS ATIVAS (lembrete) ===")
+        lines.append("=== CAMPANHAS ATIVAS (LEMBRETE) ===")
         for c in active:
             done = checks_done_in_window(c)
             total = int(c["teimosinha_n"])
@@ -319,10 +323,8 @@ def build_email_digest(
             lines.append(f"- {c['id']} | start={c['start_concurso']} -> alvo={c['target_start_concurso']} | surpresinha {done}/{total} | remaining={rem}")
             if last_chk:
                 lines.append(f"  último: concurso {last_chk.get('concurso')} | best_hits={last_chk.get('best_hits')} | best_game={last_chk.get('best_game')}")
-            # jogos
-            lines.append("  Jogos (do JSON da campanha):")
-            for k, v in (c.get("jogos", {}) or {}).items():
-                lines.append(f"    {k}: {v}")
+            lines.append("  Jogos:")
+            lines.extend(_fmt_games_block(c.get("jogos", {}) or {}))
         lines.append("")
 
     return "\n".join(lines)
@@ -330,11 +332,19 @@ def build_email_digest(
 def main() -> int:
     args = parse_args()
 
+    # Ensure dirs exist (avoids 404 in GH Pages / html reads)
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    if not STATE_PATH.exists():
+        save_state({"version": 1, "updated_at": None, "campaigns": []})
+
+    # Delegate signal+gate to your validated script
     sig = run_daily_signal(args.script, args.teimosinha, args.min_hits_stop, args.gate_percentis)
 
-    # Determine "today" for snapshot naming: use last_data if present, else UTC date
-    ymd = sig.get("last_data") or datetime.utcnow().date().isoformat()
-    write_daily_snapshot(sig, ymd)
+    # Snapshot naming: use "today in Dublin run" date (UTC is fine for file partitioning),
+    # but we keep the script's last_data for context.
+    run_ymd = datetime.utcnow().date().isoformat()
+    write_daily_snapshot(sig, run_ymd)
 
     # Find XLSX saved by your script auto-download flow
     xlsx = args.xlsx.strip() or find_latest_xlsx()
@@ -345,12 +355,10 @@ def main() -> int:
     if not draws:
         raise RuntimeError("Não consegui carregar concursos do XLSX.")
     latest = draws[-1]
-    draw_by_concurso = {d.concurso: d for d in draws}
 
     state = load_state()
     campaigns: List[Dict] = state.get("campaigns", []) or []
 
-    today_created_on = ymd
     opened: List[Dict] = []
     won: List[Dict] = []
     expired: List[Dict] = []
@@ -360,20 +368,20 @@ def main() -> int:
     if bool(sig.get("gate_pass")):
         start_conc = int(sig.get("last_concurso"))
         target_start = start_conc + 1
-        cid = campaign_key(start_conc, today_created_on)
+        created_on = run_ymd
+        cid = campaign_key(start_conc, created_on)
 
         # dedupe by start_concurso OR target_start_concurso
-        exists = False
-        for c in campaigns:
-            if int(c.get("start_concurso", -1)) == start_conc or int(c.get("target_start_concurso", -1)) == target_start:
-                exists = True
-                break
+        exists = any(
+            int(c.get("start_concurso", -1)) == start_conc or int(c.get("target_start_concurso", -1)) == target_start
+            for c in campaigns
+        )
 
         if not exists:
             new_c = {
                 "id": cid,
                 "status": "active",
-                "created_on": today_created_on,
+                "created_on": created_on,
                 "start_concurso": start_conc,
                 "target_start_concurso": target_start,
                 "teimosinha_n": int(args.teimosinha),
@@ -391,8 +399,6 @@ def main() -> int:
             continue
 
         if not within_offset_window(c, latest.concurso):
-            # not in window yet (campaign started but target not reached) OR already beyond window
-            # if beyond window and no win -> expire
             start = int(c["target_start_concurso"])
             end = start + int(c["teimosinha_n"]) - 1
             if latest.concurso > end:
@@ -416,29 +422,25 @@ def main() -> int:
             }
             won.append(c)
         else:
-            # if used all offsets after appending this check, expire
             if checks_done_in_window(c) >= int(c["teimosinha_n"]):
                 c["status"] = "expired"
                 expired.append(c)
 
-    # active campaigns after updates
     active = [c for c in campaigns if c.get("status") == "active"]
 
-    # Save state
     state["campaigns"] = campaigns
     save_state(state)
 
-    # Decide email policy:
-    # Send if:
-    # - opened today OR
-    # - any active OR
-    # - any won/expired today
-    should_email = bool(opened or active or won or expired)
+    # Email policy:
+    # - If gate_pass True -> always email (campaign opened)
+    # - If any active campaigns -> daily reminder email
+    # - If won/expired today -> email
+    should_email = bool(opened or active or won or expired or args.force_email)
 
     if should_email:
         body = build_email_digest(
             sig=sig,
-            today_ymd=ymd,
+            run_ymd=run_ymd,
             latest_draw=latest,
             opened=opened,
             updates=updates,
@@ -451,12 +453,13 @@ def main() -> int:
     else:
         print("[EMAIL] will_send=false")
 
-    # expose a tiny output JSON for workflow consumption if you want later
     Path("runner_out.json").write_text(
         json.dumps(
             {
-                "ymd": ymd,
-                "latest_concurso": latest.concurso,
+                "run_ymd": run_ymd,
+                "last_concurso_json": sig.get("last_concurso"),
+                "latest_concurso_xlsx": latest.concurso,
+                "gate_pass": bool(sig.get("gate_pass")),
                 "email": should_email,
                 "opened": len(opened),
                 "active": len(active),
@@ -464,12 +467,11 @@ def main() -> int:
                 "expired": len(expired),
             },
             indent=2,
+            ensure_ascii=False,
         ),
         encoding="utf-8",
     )
-
     return 0
-
 
 if __name__ == "__main__":
     raise SystemExit(main())
