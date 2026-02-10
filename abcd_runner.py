@@ -252,6 +252,9 @@ def load_draws_from_xlsx(path: str, sheet_preference: str = "LOTOFÁCIL") -> Lis
 
         r += 1
 
+    draws.sort(key=lambda x: x.concurso)
+    return draws
+
     
 def payout_for_hits(draw: Draw, hits: int) -> float:
     return float(draw.rateios.get(hits, 0.0))
@@ -263,8 +266,6 @@ def infer_aposta15_custo(draw: Draw, fallback: float = 3.50) -> float:
         return float(v11) / 2.0
     return float(fallback)
 
-draws.sort(key=lambda x: x.concurso)
-    return draws
 
 
 # =========================
