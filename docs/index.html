@@ -130,14 +130,27 @@
   }
 
   async function loadCampaigns() {
+    const meta = document.getElementById("campaigns_meta");
+    const box  = document.getElementById("campaigns");
+
     try {
-      const state = await jget("./state/abcd_campaigns.json");
+      const r = await fetch("./state/abcd_campaigns.json", { cache: 'no-store' });
+
+      if (r.status === 404) {
+        meta.textContent = "Nenhuma campanha ainda (state/abcd_campaigns.json não existe).";
+        box.innerHTML = `<div class="muted small">Crie <span class="mono">docs/state/abcd_campaigns.json</span> com campaigns=[] ou rode o workflow pelo menos uma vez.</div>`;
+        return;
+      }
+
+      if (!r.ok) throw new Error(`HTTP ${r.status} ao ler ./state/abcd_campaigns.json`);
+      const state = await r.json();
       renderCampaigns(state);
     } catch (e) {
-      document.getElementById("campaigns_meta").textContent = "Não consegui ler state/abcd_campaigns.json";
-      document.getElementById("campaigns").innerHTML = `<div class="mono small" style="color:#b00;">${escapeHtml(e)}</div>`;
+      meta.textContent = "Falha ao carregar campanhas.";
+      box.innerHTML = `<div class="mono small" style="color:#b00;">${escapeHtml(e)}</div>`;
     }
   }
+
 
   async function loadManifest() {
     // manifest com lista de dias disponíveis
