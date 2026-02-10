@@ -54,6 +54,34 @@ jobs:
         run: |
           python abcd_runner.py --teimosinha 37 --min_hits_stop 14 --gate_percentis 25,75
 
+      - name: Build manifest.json for docs/results
+        if: steps.guard.outputs.should_run == 'true'
+        run: |
+          python - << 'PY'
+          import json
+          from pathlib import Path
+
+          root = Path("docs/results")
+          root.mkdir(parents=True, exist_ok=True)
+
+          days = []
+          for p in sorted(root.rglob("*.json")):
+            if p.name == "manifest.json":
+              continue
+            # esperamos formato docs/results/YYYY/MM/YYYY-MM-DD.json
+            try:
+              label = p.stem  # YYYY-MM-DD
+              # path relativo ao docs/
+              rel = p.relative_to(Path("docs"))
+              days.append({"label": label, "path": "./" + str(rel).replace("\\","/")})
+            except Exception:
+              pass
+
+          out = {"days": days}
+          (root / "manifest.json").write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
+          print("manifest days:", len(days))
+          PY
+          
       - name: Commit docs updates
         if: steps.guard.outputs.should_run == 'true'
         run: |
