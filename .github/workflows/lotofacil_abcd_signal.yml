@@ -81,9 +81,7 @@ jobs:
         run: |
           mkdir -p docs/state docs/results
           if [ ! -f docs/state/abcd_campaigns.json ]; then
-            cat > docs/state/abcd_campaigns.json << 'EOF'
-            { "version": 1, "updated_at": null, "campaigns": [] }
-            EOF
+            printf '{ "version": 1, "updated_at": null, "campaigns": [] }\n' > docs/state/abcd_campaigns.json
           fi
 
       - name: Run ABCD runner (daily snapshot + campaigns)
