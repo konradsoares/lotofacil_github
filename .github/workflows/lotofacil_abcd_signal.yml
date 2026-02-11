@@ -84,37 +84,32 @@ jobs:
             printf '{ "version": 1, "updated_at": null, "campaigns": [] }\n' > docs/state/abcd_campaigns.json
           fi
 
-      - name: Debug XLSX structure (download + inspect)
-        if: steps.guard.outputs.should_run == 'true'
-        run: |
-          python - << 'PY'
-          import requests, glob
-          from openpyxl import load_workbook
-
-          CAIXA_URL = "https://servicebus3.caixa.gov.br/portaldeloterias/api/resultados/download?modalidade=Lotof%C3%A1cil"
-          out = "resultados_debug.xlsx"
-
-          r = requests.get(CAIXA_URL, timeout=45, verify=False)
-          r.raise_for_status()
-          open(out, "wb").write(r.content)
-
-          print("Saved:", out, "bytes:", len(r.content))
-
-          wb = load_workbook(out, data_only=True)
-          print("Sheets:", wb.sheetnames)
-
-          for name in wb.sheetnames[:3]:
-            ws = wb[name]
-            print("\n=== SHEET:", name, "===")
-            for r in range(1, 10):
-              row = [ws.cell(r,c).value for c in range(1, 25)]
-              print(r, row)
-          PY
       - name: Run ABCD runner (daily snapshot + campaigns)
         if: steps.guard.outputs.should_run == 'true'
         run: |
           python abcd_runner.py --teimosinha 37 --min_hits_stop 14 --gate_percentis 25,75
 
+      - name: Save daily signal JSON into docs/results
+        if: steps.guard.outputs.should_run == 'true'
+        run: |
+          python - << 'PY'
+          import json
+          from pathlib import Path
+          out = {}
+          p = Path('runner_out.json')
+          if p.exists():
+              out = json.loads(p.read_text(encoding='utf-8'))
+          snap = out.get('snapshot_path')
+          sig = Path('abcd_signal.json')
+          if snap and sig.exists():
+              sp = Path(snap)
+              target = sp.with_name(sp.stem + '_signal.json')
+              target.parent.mkdir(parents=True, exist_ok=True)
+              target.write_text(sig.read_text(encoding='utf-8'), encoding='utf-8')
+              print('Saved:', target.as_posix())
+          else:
+              print('No snapshot_path or abcd_signal.json missing; skipping')
+          PY
       - name: Stamp last run (Dublin date)
         if: steps.guard.outputs.should_run == 'true'
         run: |
@@ -166,12 +161,18 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Só o que o site precisa + estado/campanhas
-          git add docs/ runner_out.json email_body.txt || true
+          # Evita erro quando um arquivo opcional não existe (ex: email_body.txt)
+          shopt -s nullglob
+          git add docs/ || true
+          opt_files=(runner_out.json email_body.txt)
+          if [ ${#opt_files[@]} -gt 0 ]; then
+            git add "${opt_files[@]}" 2>/dev/null || true
+          fi
 
           git diff --cached --quiet && echo "No changes to commit" && exit 0
           git commit -m "ABCD: daily snapshot + campaigns"
           git push
+
 
       - name: Upload artifacts
         if: steps.guard.outputs.should_run == 'true'
