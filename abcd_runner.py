@@ -9,7 +9,9 @@ from dataclasses import dataclass
 from datetime import datetime, date
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
-
+from datetime import datetime, date
+from zoneinfo import ZoneInfo
+import shutil
 from openpyxl import load_workbook
 
 # This runner delegates ALL ABCD logic (including gate calculation) to the main script,
@@ -171,6 +173,19 @@ def write_daily_snapshot(sig: Dict, ymd: str) -> Path:
     outpath = outdir / f"{ymd}.json"
     outpath.write_text(json.dumps(sig, ensure_ascii=False, indent=2), encoding="utf-8")
     return outpath
+
+def write_daily_signal_copy(ymd: str) -> Path:
+    """
+    Copia o abcd_signal.json bruto (gerado pelo script) para dentro de docs/results/YYYY/MM
+    com nome datado: YYYY-MM-DD_signal.json
+    """
+    outdir = ensure_snapshot_dirs(ymd)
+    src = Path("abcd_signal.json")
+    if not src.exists():
+        raise RuntimeError("abcd_signal.json não existe após rodar o daily_signal.")
+    dst = outdir / f"{ymd}_signal.json"
+    shutil.copyfile(src, dst)
+    return dst
 
 # -------- helpers --------
 
@@ -344,8 +359,11 @@ def main() -> int:
     # Snapshot naming: use "today in Dublin run" date (UTC is fine for file partitioning),
     # but we keep the script's last_data for context.
     run_ymd = datetime.utcnow().date().isoformat()
-    write_daily_snapshot(sig, run_ymd)
+    snap_path = write_daily_snapshot(sig, run_ymd)
+    sig_path = write_daily_signal_copy(run_ymd)
 
+    print(f"Snapshot: {snap_path}")
+    print(f"Signal copy: {sig_path}")
     # Find XLSX saved by your script auto-download flow
     xlsx = args.xlsx.strip() or find_latest_xlsx()
     if not xlsx:
