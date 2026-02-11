@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Lotofácil ABCD — Dashboard</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; }
+    h1 { margin: 0 0 8px; }
+    .muted { color: #666; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    @media (max-width: 1000px) { .grid { grid-template-columns: 1fr; } }
+    .card { border: 1px solid #ddd; border-radius: 10px; padding: 14px; }
+    .card h2 { margin: 0 0 10px; font-size: 18px; }
+    pre { background: #0b1020; color: #e8e8e8; padding: 12px; border-radius: 10px; overflow:auto; }
+    table { width:100%; border-collapse: collapse; }
+    th, td { border-bottom: 1px solid #eee; padding: 8px 6px; vertical-align: top; }
+    th { text-align:left; font-size: 12px; color:#555; }
+    .pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; border:1px solid #ddd; }
+    .ok { background:#eaffea; border-color:#b7e3b7; }
+    .bad { background:#ffecec; border-color:#f0b4b4; }
+    .warn { background:#fff6dc; border-color:#ecd79a; }
+    .small { font-size: 12px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .row { display:flex; gap:10px; flex-wrap: wrap; align-items:center; }
+    select { padding:6px 8px; border-radius:8px; border:1px solid #ddd; }
+    button { padding:6px 10px; border-radius:8px; border:1px solid #ddd; background:#fff; cursor:pointer; }
+    button:hover { background:#f7f7f7; }
+  </style>
+</head>
+<body>
+  <h1>Lotofácil ABCD</h1>
+  <div class="muted small">Lê snapshots diários em <span class="mono">docs/results/YYYY/MM/YYYY-MM-DD.json</span> e campanhas em <span class="mono">docs/state/abcd_campaigns.json</span>.</div>
+
+  <div class="grid" style="margin-top:16px;">
+    <div class="card">
+      <h2>Campanhas</h2>
+      <div id="campaigns_meta" class="muted small">Carregando…</div>
+      <div id="campaigns"></div>
+    </div>
+
+    <div class="card">
+      <h2>Snapshots por dia</h2>
+      <div class="row">
+        <label class="small muted">Dia:</label>
+        <select id="daySelect"></select>
+        <button id="loadBtn">Carregar</button>
+        <span id="snapMeta" class="small muted"></span>
+      </div>
+      <pre id="snapshot" style="margin-top:12px;">Carregando…</pre>
+    </div>
+  </div>
+
+<script>
+  async function jget(path) {
+    const r = await fetch(path, { cache: 'no-store' });
+    if (!r.ok) throw new Error(`HTTP ${r.status} ao ler ${path}`);
+    return await r.json();
+  }
+
+  function fmtStatus(status) {
+    if (status === "won") return `<span class="pill ok">won</span>`;
+    if (status === "expired") return `<span class="pill bad">expired</span>`;
+    return `<span class="pill warn">active</span>`;
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  function renderCampaigns(state) {
+    const el = document.getElementById("campaigns");
+    const meta = document.getElementById("campaigns_meta");
+
+    const camps = (state && state.campaigns) ? state.campaigns : [];
+    const active = camps.filter(c => c.status === "active");
+    const won = camps.filter(c => c.status === "won");
+    const exp = camps.filter(c => c.status === "expired");
+
+    meta.textContent = `Atualizado: ${state.updated_at || "?"} | active=${active.length} | won=${won.length} | expired=${exp.length}`;
+
+    if (!camps.length) {
+      el.innerHTML = `<div class="muted small">Nenhuma campanha cadastrada ainda.</div>`;
+      return;
+    }
+
+    const rows = camps
+      .sort((a,b) => (b.start_concurso||0) - (a.start_concurso||0))
+      .map(c => {
+        const checks = c.checks || [];
+        const done = checks.length;
+        const total = c.teimosinha_n || 0;
+        const rem = Math.max(0, total - done);
+        const last = checks.length ? checks[checks.length-1] : null;
+
+        const jogos = c.jogos || {};
+        const jogosHtml = Object.entries(jogos).map(([k,v]) =>
+          `<div class="mono small">${escapeHtml(k)}: ${escapeHtml(v)}</div>`
+        ).join("");
+
+        let lastHtml = `<span class="muted small">sem checks ainda</span>`;
+        if (last) {
+          lastHtml = `<span class="mono small">concurso ${last.concurso} | best_hits=${last.best_hits} | best_game=${escapeHtml(last.best_game)}</span>`;
+        }
+
+        let winHtml = "";
+        if (c.status === "won" && c.won) {
+          winHtml = `<div class="small">✅ ganhou no concurso <b>${c.won.when_concurso}</b> com <b>${c.won.best_hits}</b> hits (${escapeHtml(c.won.best_game)})</div>`;
+        }
+
+        return `
+          <div style="border-top:1px solid #eee; padding-top:10px; margin-top:10px;">
+            <div class="row">
+              <div class="mono"><b>${escapeHtml(c.id)}</b></div>
+              ${fmtStatus(c.status)}
+            </div>
+            <div class="small">
+              start=<b>${c.start_concurso}</b> → alvo_início=<b>${c.target_start_concurso}</b>
+              | surpresinha <b>${done}/${total}</b> | remaining=<b>${rem}</b> | min_stop=<b>${c.min_hits_stop}</b>
+            </div>
+            <div class="small">último: ${lastHtml}</div>
+            ${winHtml}
+            <div class="small muted" style="margin-top:6px;">Jogos:</div>
+            ${jogosHtml || `<div class="muted small">sem jogos no JSON</div>`}
+          </div>
+        `;
+      }).join("");
+
+    el.innerHTML = rows;
+  }
+
+  async function loadCampaigns() {
+    const meta = document.getElementById("campaigns_meta");
+    const box  = document.getElementById("campaigns");
+
+    try {
+      const r = await fetch("./state/abcd_campaigns.json", { cache: 'no-store' });
+
+      if (r.status === 404) {
+        meta.textContent = "Nenhuma campanha ainda (state/abcd_campaigns.json não existe).";
+        box.innerHTML = `<div class="muted small">Crie <span class="mono">docs/state/abcd_campaigns.json</span> com campaigns=[] ou rode o workflow pelo menos uma vez.</div>`;
+        return;
+      }
+
+      if (!r.ok) throw new Error(`HTTP ${r.status} ao ler ./state/abcd_campaigns.json`);
+      const state = await r.json();
+      renderCampaigns(state);
+    } catch (e) {
+      meta.textContent = "Falha ao carregar campanhas.";
+      box.innerHTML = `<div class="mono small" style="color:#b00;">${escapeHtml(e)}</div>`;
+    }
+  }
+
+
+  async function loadManifest() {
+    // manifest com lista de dias disponíveis
+    const man = await jget("./results/manifest.json");
+    return man.days || [];
+  }
+
+  async function loadSnapshot(path) {
+    const snap = await jget(path);
+    document.getElementById("snapshot").textContent = JSON.stringify(snap, null, 2);
+    const gate = snap.gate || {};
+    document.getElementById("snapMeta").textContent =
+      `gate_pass=${snap.gate_pass} | last_concurso=${snap.last_concurso} | gap=${gate.gap_atual}`;
+  }
+
+  async function boot() {
+    await loadCampaigns();
+
+    let days = [];
+    try {
+      days = await loadManifest();
+    } catch(e) {
+      document.getElementById("snapshot").textContent = "Faltando results/manifest.json (ver step do workflow).";
+      return;
+    }
+
+    // mais recente primeiro
+    days.sort().reverse();
+
+    const sel = document.getElementById("daySelect");
+    sel.innerHTML = days.map(d => `<option value="${escapeHtml(d.path)}">${escapeHtml(d.label)}</option>`).join("");
+
+    const first = days[0];
+    if (first) await loadSnapshot(first.path);
+
+    document.getElementById("loadBtn").onclick = async () => {
+      const path = sel.value;
+      await loadSnapshot(path);
+    };
+  }
+
+  boot();
+</script>
+</body>
+</html>
