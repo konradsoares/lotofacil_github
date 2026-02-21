@@ -1,5 +1,27 @@
 {
   "version": 1,
-  "updated_at": "2026-02-20T06:31:20Z",
-  "campaigns": []
+  "updated_at": "2026-02-21T12:24:04Z",
+  "campaigns": [
+    {
+      "id": "c_3617_20260221",
+      "status": "active",
+      "created_on": "2026-02-21",
+      "start_concurso": 3617,
+      "target_start_concurso": 3618,
+      "teimosinha_n": 37,
+      "min_hits_stop": 14,
+      "jogos": {
+        "jogo_A_B": "01 02 03 04 05 06 09 14 15 17 18 20 21 23 24",
+        "jogo_A_C": "01 02 03 04 05 06 10 11 13 14 20 21 23 24 25",
+        "jogo_A_D": "03 04 05 06 07 12 13 14 16 17 18 20 21 23 24",
+        "jogo_B_C_D": "01 03 05 07 09 10 11 12 13 14 15 16 17 18 24"
+      },
+      "checks": [],
+      "won": {
+        "when_concurso": null,
+        "best_hits": null,
+        "best_game": null
+      }
+    }
+  ]
 }
