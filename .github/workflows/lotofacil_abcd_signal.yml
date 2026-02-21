@@ -87,7 +87,7 @@ jobs:
       - name: Run ABCD runner (daily snapshot + campaigns)
         if: steps.guard.outputs.should_run == 'true'
         run: |
-          python abcd_runner.py --teimosinha 37 --min_hits_stop 14 --gate_percentis 25,75
+          python abcd_runner.py --teimosinha 37 --min_hits_stop 14 --gate_percentis 20,79
 
       - name: Save daily signal JSON into docs/results
         if: steps.guard.outputs.should_run == 'true'
