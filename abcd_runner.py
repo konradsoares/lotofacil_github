@@ -263,10 +263,26 @@ def check_campaign_against_draw(camp: Dict, draw: Draw) -> Dict:
         h = compute_hits(gnums, draw.nums)
         payout = float((draw.payouts or {}).get(h, 0.0)) if h >= 11 else 0.0
         profit = payout - cost_per_game
-        rec = {"game": k, "hits": h, "payout": round(payout, 2), "cost": round(cost_per_game, 2), "profit": round(profit, 2)}
+        rec = {
+            "game": k,
+            "hits": h,
+            "payout": round(payout, 2),
+            "cost": round(cost_per_game, 2),
+            "profit": round(profit, 2),
+        }
         per_game.append(rec)
+
         if h >= 11:
-            paying_events.append({"game": k, "hits": h, "payout": round(payout, 2), "profit": round(profit, 2)})
+            paying_events.append(
+                {
+                    "game": k,
+                    "hits": h,
+                    "payout": round(payout, 2),
+                    "cost": round(cost_per_game, 2),
+                    "profit": round(profit, 2),
+                }
+            )
+
         if h > best_hits or (h == best_hits and payout > best_payout):
             best_hits = h
             best_key = k
@@ -276,18 +292,25 @@ def check_campaign_against_draw(camp: Dict, draw: Draw) -> Dict:
     total_payout = round(sum(float(x.get("payout", 0.0)) for x in per_game), 2)
     total_profit = round(total_payout - total_cost, 2)
 
-    return {
+    chk = {
         "concurso": draw.concurso,
         "data": draw.data,
+        "offset": _camp_offset(camp, draw.concurso),
         "best_hits": best_hits,
         "best_game": best_key,
         "best_payout": round(best_payout, 2),
         "per_game": per_game,
         "paying_events": paying_events,
+        # canonical runner fields (kept for backward compatibility)
         "total_cost": total_cost,
         "total_payout": total_payout,
         "total_profit": total_profit,
+        # aliases expected by HTML / enriched schema
+        "cost_total": total_cost,
+        "payout_total": total_payout,
+        "profit_total": total_profit,
     }
+    return chk
 
 def already_checked(camp: Dict, concurso: int) -> bool:
     return any((chk.get("concurso") == concurso) for chk in (camp.get("checks", []) or []))
@@ -314,36 +337,181 @@ def _campaign_totals(camp: Dict) -> Dict[str, float]:
 def _refresh_campaign_summary(camp: Dict) -> None:
     checks = camp.get("checks", []) or []
     totals = _campaign_totals(camp)
+
     pay_events = []
     best_hits = -1
     best_game = None
     best_concurso = None
+
+    max_offset = 0
     for ch in checks:
+        conc = ch.get("concurso")
+        if conc is not None:
+            try:
+                off = _camp_offset(camp, int(conc))
+                ch["offset"] = ch.get("offset", off)
+                max_offset = max(max_offset, off)
+            except Exception:
+                pass
+
         bh = int(ch.get("best_hits", -1))
         if bh > best_hits:
             best_hits = bh
             best_game = ch.get("best_game")
             best_concurso = ch.get("concurso")
+
+        # propagate paying events (>=11) with campaign-level context
         for ev in (ch.get("paying_events", []) or []):
-            pay_events.append({
-                "concurso": ch.get("concurso"),
-                "data": ch.get("data"),
-                "offset": _camp_offset(camp, int(ch.get("concurso"))),
-                "game": ev.get("game"),
-                "hits": ev.get("hits"),
-                "payout": ev.get("payout"),
-                "profit": ev.get("profit"),
-            })
+            pay_events.append(
+                {
+                    "concurso": ch.get("concurso"),
+                    "data": ch.get("data"),
+                    "offset": ch.get("offset") or (_camp_offset(camp, int(ch.get("concurso")))),
+                    "game": ev.get("game"),
+                    "hits": ev.get("hits"),
+                    "payout": ev.get("payout"),
+                    "cost": ev.get("cost"),  # cost per game on that concurso
+                    "profit": ev.get("profit"),
+                }
+            )
+
+        # ensure check-level aliases exist for HTML/enriched schema
+        if "cost_total" not in ch and "total_cost" in ch:
+            ch["cost_total"] = ch.get("total_cost")
+        if "payout_total" not in ch and "total_payout" in ch:
+            ch["payout_total"] = ch.get("total_payout")
+        if "profit_total" not in ch and "total_profit" in ch:
+            ch["profit_total"] = ch.get("total_profit")
+
     camp["paying_hits_ge11"] = pay_events
+
+    # offset_atual is the last checked offset inside the teimosinha window
+    camp["offset_atual"] = max_offset
+    remaining = max(0, int(camp.get("teimosinha_n", 0)) - max_offset)
+
     camp["summary"] = {
         "checks_count": len(checks),
-        "remaining": max(0, int(camp.get("teimosinha_n", 0)) - len(checks)),
+        "remaining": remaining,
         "best_hits_ate_agora": (None if best_hits < 0 else best_hits),
         "best_game_ate_agora": best_game,
         "best_concurso_ate_agora": best_concurso,
         "eventos_pagantes_ge11": len(pay_events),
         **totals,
     }
+
+def _campaign_needs_backfill(camp: Dict) -> bool:
+    # Campaign-level fields
+    if not isinstance(camp.get("summary"), dict):
+        return True
+    if "paying_hits_ge11" not in camp:
+        return True
+
+    # Check-level fields (older runs may have missing paying_events / totals)
+    for ch in (camp.get("checks", []) or []):
+        if "paying_events" not in ch:
+            return True
+        if "total_cost" not in ch or "total_payout" not in ch or "total_profit" not in ch:
+            return True
+    return False
+
+
+def _infer_won_concurso_from_checks(camp: Dict, checks: List[Dict]) -> Optional[int]:
+    try:
+        stop = int(camp.get("min_hits_stop", 14))
+    except Exception:
+        stop = 14
+    for ch in checks:
+        try:
+            if int(ch.get("best_hits", -1)) >= stop:
+                return int(ch.get("concurso"))
+        except Exception:
+            continue
+    return None
+
+
+def backfill_campaign_history(camp: Dict, draw_by_concurso: Dict[int, Draw], latest_concurso: int) -> bool:
+    '''
+    Rebuilds checks/paying events/summary for an existing campaign from target_start_concurso up to:
+      - latest_concurso (if active), capped by window end
+      - window end (if expired)
+      - won.when_concurso (if won), or first >= min_hits_stop found during rebuild
+    Preserves campaign.status, but enriches missing fields and normalizes check schemas.
+    Returns True if campaign was modified.
+    '''
+    if not _campaign_needs_backfill(camp):
+        # still normalize summary/aliases every run
+        _refresh_campaign_summary(camp)
+        return False
+
+    status = camp.get("status", "active")
+    start = int(camp.get("target_start_concurso", 0))
+    n = int(camp.get("teimosinha_n", 0))
+    end = int(camp.get("target_end_concurso", start + n - 1))
+
+    # determine eval_end
+    eval_end = min(latest_concurso, end)
+    if status == "expired":
+        eval_end = min(latest_concurso, end)
+    elif status == "won":
+        when = None
+        won = camp.get("won", {}) or {}
+        try:
+            if won.get("when_concurso") is not None:
+                when = int(won.get("when_concurso"))
+        except Exception:
+            when = None
+        if when is not None:
+            eval_end = min(when, end, latest_concurso)
+
+    # rebuild sequentially
+    new_checks: List[Dict] = []
+    for conc in range(start, eval_end + 1):
+        d = draw_by_concurso.get(conc)
+        if not d:
+            continue  # XLSX may not have this concurso yet
+        chk = check_campaign_against_draw(camp, d)
+        new_checks.append(chk)
+
+        # if campaign is won but missing when_concurso, stop at first win
+        if status == "won":
+            try:
+                if int(chk.get("best_hits", -1)) >= int(camp.get("min_hits_stop", 14)):
+                    eval_end = conc
+                    break
+            except Exception:
+                pass
+
+    camp["checks"] = new_checks
+
+    # Rebuild last_check
+    if new_checks:
+        last = new_checks[-1]
+        camp["last_check"] = {
+            "concurso": last.get("concurso"),
+            "data": last.get("data"),
+            "best_hits": last.get("best_hits"),
+            "best_game": last.get("best_game"),
+            "total_profit": last.get("total_profit"),
+        }
+
+    # If status=won and won block incomplete, fill it from rebuilt checks
+    if status == "won":
+        when = (camp.get("won", {}) or {}).get("when_concurso")
+        if when is None:
+            when2 = _infer_won_concurso_from_checks(camp, new_checks)
+            if when2 is not None:
+                # pick the winning check
+                win_chk = next((c for c in new_checks if c.get("concurso") == when2), None)
+                camp["won"] = {
+                    "when_concurso": when2,
+                    "best_hits": win_chk.get("best_hits") if win_chk else None,
+                    "best_game": win_chk.get("best_game") if win_chk else None,
+                    "offset": _camp_offset(camp, when2),
+                    "best_payout": win_chk.get("best_payout") if win_chk else None,
+                }
+
+    _refresh_campaign_summary(camp)
+    return True
 
 def _fmt_games_block(jogos: Dict) -> List[str]:
     out = []
@@ -468,6 +636,19 @@ def main() -> int:
     state = load_state()
     campaigns: List[Dict] = state.get("campaigns", []) or []
 
+    # Map draws by concurso for fast backfill/checks
+    draw_by_concurso: Dict[int, Draw] = {d.concurso: d for d in draws}
+
+    # Backfill/enrich existing campaigns that were created by older runner versions
+    backfilled: List[str] = []
+    for c in campaigns:
+        try:
+            if backfill_campaign_history(c, draw_by_concurso, latest.concurso):
+                backfilled.append(str(c.get("id")))
+        except Exception:
+            # Never break daily run due to a single campaign
+            pass
+
     opened: List[Dict] = []
     won: List[Dict] = []
     expired: List[Dict] = []
@@ -524,7 +705,20 @@ def main() -> int:
         c.setdefault("checks", []).append(chk)
         c["last_check"] = {"concurso": chk.get("concurso"), "data": chk.get("data"), "best_hits": chk.get("best_hits"), "best_game": chk.get("best_game"), "total_profit": chk.get("total_profit")}
         _refresh_campaign_summary(c)
-        updates.append({"id": c["id"], "check": chk})
+        updates.append({
+            "campaign_id": c["id"],
+            "id": c["id"],  # compat
+            "concurso": chk.get("concurso"),
+            "data": chk.get("data"),
+            "offset": chk.get("offset"),
+            "best_hits": chk.get("best_hits"),
+            "best_game": chk.get("best_game"),
+            "best_payout": chk.get("best_payout"),
+            "total_cost": chk.get("total_cost"),
+            "total_payout": chk.get("total_payout"),
+            "total_profit": chk.get("total_profit"),
+            "check": chk,  # keep full detail for debug
+        })
 
         if int(chk["best_hits"]) >= int(c["min_hits_stop"]):
             c["status"] = "won"
