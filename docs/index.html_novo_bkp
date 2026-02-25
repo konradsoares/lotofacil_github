@@ -195,44 +195,24 @@ async function loadCampaigns(){
 
 async function loadManifestAndDays(){
   const man = await fetchJson('./results/manifest.json');
-
-  // Suporta 2 formatos de manifest:
-  // 1) { days: [{label, path}, ...] }  (formato antigo)
-  // 2) { files: ["results/YYYY/MM/YYYY-MM-DD.json", ...] } (formato novo)
-  let items = [];
-
-  if (Array.isArray(man?.days)) {
-    items = man.days
-      .filter(d => d && typeof d.path === 'string')
-      .map(d => ({ path: d.path, label: d.label || (d.path.match(/(\d{4}-\d{2}-\d{2})\.json$/)||[])[1] || d.path }));
-  } else {
-    const files = Array.isArray(man?.files) ? man.files : (Array.isArray(man) ? man : []);
-    items = files
-      .filter(f => typeof f === 'string')
-      .filter(f => /\d{4}-\d{2}-\d{2}\.json$/i.test(f) && !f.endsWith('_signal.json') && !f.endsWith('manifest.json'))
-      .map(f => {
-        const m = f.match(/(\d{4}-\d{2}-\d{2})\.json$/);
-        return { path: f, label: m ? m[1] : f };
-      });
-  }
-
-  // mais recente primeiro
-  items.sort((a,b) => (a.label||'').localeCompare(b.label||'')).reverse();
-
+  const files = Array.isArray(man.files) ? man.files : [];
+  const normalized = files
+    .filter(f => /\d{4}-\d{2}-\d{2}\.json$/i.test(f) && !f.endsWith('_signal.json') && !f.endsWith('manifest.json'))
+    .sort()
+    .reverse();
   const sel = document.getElementById('daySelect');
   sel.innerHTML = '';
-
-  items.forEach(it => {
+  normalized.forEach(f => {
+    const m = f.match(/(\d{4}-\d{2}-\d{2})\.json$/);
+    const day = m ? m[1] : f;
     const o = document.createElement('option');
-    o.value = it.path;
-    o.textContent = it.label;
+    o.value = f;
+    o.textContent = day;
     sel.appendChild(o);
   });
-
-  if (items.length) await loadSnapshot(items[0].path);
+  if (normalized.length) await loadSnapshot(normalized[0]);
   else document.getElementById('snapRaw').textContent = 'Nenhum snapshot encontrado.';
 }
-
 
 async function loadSnapshot(path){
   const snap = await fetchJson('./' + path.replace(/^\.\//,''));
