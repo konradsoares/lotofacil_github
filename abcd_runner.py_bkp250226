@@ -8,7 +8,7 @@ import subprocess
 from dataclasses import dataclass
 from datetime import datetime, date
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 from datetime import datetime, date
 from zoneinfo import ZoneInfo
 import shutil
@@ -37,22 +37,6 @@ def _norm_header(s: str) -> str:
     s = (s or "").strip().lower()
     s = re.sub(r"\s+", " ", s)
     return s
-
-
-def _parse_brl(v: object) -> Optional[float]:
-    if v is None:
-        return None
-    if isinstance(v, (int, float)):
-        return float(v)
-    s = str(v).strip()
-    if not s:
-        return None
-    s = s.replace("R$", "").replace(".", "").replace(",", ".").strip()
-    m = re.search(r"-?\d+(?:\.\d+)?", s)
-    return float(m.group(0)) if m else None
-
-def _default_cost15_by_date(data_iso: Optional[str]) -> float:
-    return 3.50 if (data_iso and data_iso >= "2025-07-10") else 1.00
 
 def _find_header_row(ws) -> Tuple[int, Dict[str, int]]:
     """
@@ -103,10 +87,6 @@ def _find_header_row(ws) -> Tuple[int, Dict[str, int]]:
             if c_date:
                 col_map["data"] = c_date
             col_map.update(ball_cols)
-            for h in (11, 12, 13, 14, 15):
-                key = f"rateio {h} acertos"
-                if key in norm:
-                    col_map[f"rateio_{h}"] = norm.index(key) + 1
             return r, col_map
 
     raise RuntimeError("Não consegui localizar o header do XLSX (Concurso/Bola1..Bola15).")
@@ -116,8 +96,6 @@ class Draw:
     concurso: int
     data: Optional[str]
     nums: Set[int]
-    payouts: Dict[int, float]
-    cost15: float
 
 def load_draws_from_xlsx(xlsx_path: str, sheet_name: str = "LOTOFÁCIL") -> List[Draw]:
     wb = load_workbook(xlsx_path, data_only=True)
@@ -161,20 +139,8 @@ def load_draws_from_xlsx(xlsx_path: str, sheet_name: str = "LOTOFÁCIL") -> List
                 ok = False
                 break
 
-        payouts: Dict[int, float] = {}
-        for h in (11, 12, 13, 14, 15):
-            c = cols.get(f"rateio_{h}")
-            if c:
-                pv = _parse_brl(ws.cell(row=r, column=c).value)
-                if pv is not None:
-                    payouts[h] = float(pv)
-
-        cost15 = _default_cost15_by_date(data_str)
-        if payouts.get(11):
-            cost15 = round(float(payouts[11]) / 2.0, 2)
-
         if ok and len(nums) == 15:
-            draws.append(Draw(concurso=concurso, data=data_str, nums=nums, payouts=payouts, cost15=cost15))
+            draws.append(Draw(concurso=concurso, data=data_str, nums=nums))
 
         r += 1
 
@@ -254,39 +220,20 @@ def check_campaign_against_draw(camp: Dict, draw: Draw) -> Dict:
 
     best_hits = -1
     best_key = None
-    best_payout = 0.0
     per_game = []
-    paying_events = []
-    cost_per_game = float(draw.cost15 or 0.0)
-
     for k, gnums in parsed_games:
         h = compute_hits(gnums, draw.nums)
-        payout = float((draw.payouts or {}).get(h, 0.0)) if h >= 11 else 0.0
-        profit = payout - cost_per_game
-        rec = {"game": k, "hits": h, "payout": round(payout, 2), "cost": round(cost_per_game, 2), "profit": round(profit, 2)}
-        per_game.append(rec)
-        if h >= 11:
-            paying_events.append({"game": k, "hits": h, "payout": round(payout, 2), "profit": round(profit, 2)})
-        if h > best_hits or (h == best_hits and payout > best_payout):
+        per_game.append({"game": k, "hits": h})
+        if h > best_hits:
             best_hits = h
             best_key = k
-            best_payout = payout
-
-    total_cost = round(cost_per_game * len(parsed_games), 2)
-    total_payout = round(sum(float(x.get("payout", 0.0)) for x in per_game), 2)
-    total_profit = round(total_payout - total_cost, 2)
 
     return {
         "concurso": draw.concurso,
         "data": draw.data,
         "best_hits": best_hits,
         "best_game": best_key,
-        "best_payout": round(best_payout, 2),
         "per_game": per_game,
-        "paying_events": paying_events,
-        "total_cost": total_cost,
-        "total_payout": total_payout,
-        "total_profit": total_profit,
     }
 
 def already_checked(camp: Dict, concurso: int) -> bool:
@@ -300,50 +247,6 @@ def within_offset_window(camp: Dict, concurso: int) -> bool:
 
 def checks_done_in_window(camp: Dict) -> int:
     return len(camp.get("checks", []) or [])
-
-
-def _camp_offset(camp: Dict, concurso: int) -> int:
-    return int(concurso) - int(camp.get("target_start_concurso", 0)) + 1
-
-def _campaign_totals(camp: Dict) -> Dict[str, float]:
-    checks = camp.get("checks", []) or []
-    custo = round(sum(float(ch.get("total_cost", 0.0) or 0.0) for ch in checks), 2)
-    payout = round(sum(float(ch.get("total_payout", 0.0) or 0.0) for ch in checks), 2)
-    return {"custo_total": custo, "payout_total": payout, "profit_total": round(payout - custo, 2)}
-
-def _refresh_campaign_summary(camp: Dict) -> None:
-    checks = camp.get("checks", []) or []
-    totals = _campaign_totals(camp)
-    pay_events = []
-    best_hits = -1
-    best_game = None
-    best_concurso = None
-    for ch in checks:
-        bh = int(ch.get("best_hits", -1))
-        if bh > best_hits:
-            best_hits = bh
-            best_game = ch.get("best_game")
-            best_concurso = ch.get("concurso")
-        for ev in (ch.get("paying_events", []) or []):
-            pay_events.append({
-                "concurso": ch.get("concurso"),
-                "data": ch.get("data"),
-                "offset": _camp_offset(camp, int(ch.get("concurso"))),
-                "game": ev.get("game"),
-                "hits": ev.get("hits"),
-                "payout": ev.get("payout"),
-                "profit": ev.get("profit"),
-            })
-    camp["paying_hits_ge11"] = pay_events
-    camp["summary"] = {
-        "checks_count": len(checks),
-        "remaining": max(0, int(camp.get("teimosinha_n", 0)) - len(checks)),
-        "best_hits_ate_agora": (None if best_hits < 0 else best_hits),
-        "best_game_ate_agora": best_game,
-        "best_concurso_ate_agora": best_concurso,
-        "eventos_pagantes_ge11": len(pay_events),
-        **totals,
-    }
 
 def _fmt_games_block(jogos: Dict) -> List[str]:
     out = []
@@ -394,24 +297,20 @@ def build_email_digest(
         lines.append("=== CAMPANHAS ENCERRADAS (GANHOU >= stop_hits) ===")
         for c in won:
             w = c.get("won", {}) or {}
-            tot = _campaign_totals(c)
-            lines.append(f"- {c['id']} | start={c['start_concurso']} | ganhou no concurso {w.get('when_concurso')} com {w.get('best_hits')} hits ({w.get('best_game')}) | custo={tot['custo_total']:.2f} payout={tot['payout_total']:.2f} profit={tot['profit_total']:.2f}")
+            lines.append(f"- {c['id']} | start={c['start_concurso']} | ganhou no concurso {w.get('when_concurso')} com {w.get('best_hits')} hits ({w.get('best_game')})")
         lines.append("")
 
     if expired:
         lines.append("=== CAMPANHAS ENCERRADAS (EXPIRADAS) ===")
         for c in expired:
-            tot = _campaign_totals(c)
-            lines.append(f"- {c['id']} | start={c['start_concurso']} | expirou após {c.get('teimosinha_n')} concursos | custo={tot['custo_total']:.2f} payout={tot['payout_total']:.2f} profit={tot['profit_total']:.2f}")
+            lines.append(f"- {c['id']} | start={c['start_concurso']} | expirou após {c.get('teimosinha_n')} concursos")
         lines.append("")
 
     if updates:
         lines.append("=== CHECKS DE HOJE (por campanha) ===")
         for u in updates:
             chk = u["check"]
-            lines.append(f"- {u['id']} | concurso {chk['concurso']} | best_hits={chk['best_hits']} | best_game={chk['best_game']} | dia profit={float(chk.get('total_profit',0)):.2f}")
-            for ev in (chk.get("paying_events", []) or []):
-                lines.append(f"    pagou: {ev.get('game')} | {ev.get('hits')} hits | payout={float(ev.get('payout',0)):.2f} | profit={float(ev.get('profit',0)):.2f}")
+            lines.append(f"- {u['id']} | concurso {chk['concurso']} | best_hits={chk['best_hits']} | best_game={chk['best_game']}")
         lines.append("")
 
     if active:
@@ -421,8 +320,7 @@ def build_email_digest(
             total = int(c["teimosinha_n"])
             rem = max(0, total - done)
             last_chk = (c.get("checks", []) or [])[-1] if (c.get("checks") or []) else None
-            tot = _campaign_totals(c)
-            lines.append(f"- {c['id']} | start={c['start_concurso']} -> alvo={c['target_start_concurso']} | surpresinha {done}/{total} | remaining={rem} | acum profit={tot['profit_total']:.2f}")
+            lines.append(f"- {c['id']} | start={c['start_concurso']} -> alvo={c['target_start_concurso']} | surpresinha {done}/{total} | remaining={rem}")
             if last_chk:
                 lines.append(f"  último: concurso {last_chk.get('concurso')} | best_hits={last_chk.get('best_hits')} | best_game={last_chk.get('best_game')}")
             lines.append("  Jogos:")
@@ -445,7 +343,9 @@ def main() -> int:
 
     # Snapshot naming: use "today in Dublin run" date (UTC is fine for file partitioning),
     # but we keep the script's last_data for context.
-    run_ymd = datetime.now(ZoneInfo("Europe/Dublin")).date().isoformat()
+    run_ymd = datetime.utcnow().date().isoformat()
+    snap_path = write_daily_snapshot(sig, run_ymd)
+    print(f"Snapshot: {snap_path}")
     # Find XLSX saved by your script auto-download flow
     xlsx = args.xlsx.strip() or find_latest_xlsx()
     if not xlsx:
@@ -455,15 +355,6 @@ def main() -> int:
     if not draws:
         raise RuntimeError("Não consegui carregar concursos do XLSX.")
     latest = draws[-1]
-
-    sig.setdefault("config", {})
-    sig["config"]["teimosinha_n"] = int(args.teimosinha)
-    sig["config"]["min_hits_stop"] = int(args.min_hits_stop)
-    sig["config"]["gate_percentis"] = args.gate_percentis
-    try:
-        sig["gap_dentro_teimosinha"] = int((sig.get("gate") or {}).get("gap_atual", -1)) <= int(args.teimosinha)
-    except Exception:
-        sig["gap_dentro_teimosinha"] = None
 
     state = load_state()
     campaigns: List[Dict] = state.get("campaigns", []) or []
@@ -493,14 +384,12 @@ def main() -> int:
                 "created_on": created_on,
                 "start_concurso": start_conc,
                 "target_start_concurso": target_start,
-                "target_end_concurso": target_start + int(args.teimosinha) - 1,
                 "teimosinha_n": int(args.teimosinha),
                 "min_hits_stop": int(args.min_hits_stop),
                 "jogos": sig.get("jogos", {}) or {},
                 "checks": [],
                 "won": {"when_concurso": None, "best_hits": None, "best_game": None},
             }
-            _refresh_campaign_summary(new_c)
             campaigns.append(new_c)
             opened.append(new_c)
 
@@ -522,8 +411,6 @@ def main() -> int:
 
         chk = check_campaign_against_draw(c, latest)
         c.setdefault("checks", []).append(chk)
-        c["last_check"] = {"concurso": chk.get("concurso"), "data": chk.get("data"), "best_hits": chk.get("best_hits"), "best_game": chk.get("best_game"), "total_profit": chk.get("total_profit")}
-        _refresh_campaign_summary(c)
         updates.append({"id": c["id"], "check": chk})
 
         if int(chk["best_hits"]) >= int(c["min_hits_stop"]):
@@ -532,8 +419,6 @@ def main() -> int:
                 "when_concurso": chk["concurso"],
                 "best_hits": chk["best_hits"],
                 "best_game": chk["best_game"],
-                "offset": _camp_offset(c, int(chk["concurso"])),
-                "best_payout": chk.get("best_payout", 0.0),
             }
             won.append(c)
         else:
@@ -541,27 +426,7 @@ def main() -> int:
                 c["status"] = "expired"
                 expired.append(c)
 
-    for c in campaigns:
-        _refresh_campaign_summary(c)
-
     active = [c for c in campaigns if c.get("status") == "active"]
-
-    sig["campaigns_resume"] = {
-        "active": len(active),
-        "won": len([c for c in campaigns if c.get("status") == "won"]),
-        "expired": len([c for c in campaigns if c.get("status") == "expired"]),
-        "active_ids": [c.get("id") for c in active],
-    }
-    if updates:
-        sig["campaign_updates_today"] = updates
-    if opened:
-        sig["opened_campaigns_today"] = [
-            {"id": c.get("id"), "start_concurso": c.get("start_concurso"), "target_start_concurso": c.get("target_start_concurso"), "target_end_concurso": c.get("target_end_concurso")}
-            for c in opened
-        ]
-
-    snap_path = write_daily_snapshot(sig, run_ymd)
-    print(f"Snapshot: {snap_path}")
 
     state["campaigns"] = campaigns
     save_state(state)

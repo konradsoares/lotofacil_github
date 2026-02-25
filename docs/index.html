@@ -1,198 +1,239 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Lotofácil ABCD — Dashboard</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lotofácil ABCD</title>
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; }
-    h1 { margin: 0 0 8px; }
-    .muted { color: #666; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-    @media (max-width: 1000px) { .grid { grid-template-columns: 1fr; } }
-    .card { border: 1px solid #ddd; border-radius: 10px; padding: 14px; }
-    .card h2 { margin: 0 0 10px; font-size: 18px; }
-    pre { background: #0b1020; color: #e8e8e8; padding: 12px; border-radius: 10px; overflow:auto; }
-    table { width:100%; border-collapse: collapse; }
-    th, td { border-bottom: 1px solid #eee; padding: 8px 6px; vertical-align: top; }
-    th { text-align:left; font-size: 12px; color:#555; }
-    .pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; border:1px solid #ddd; }
-    .ok { background:#eaffea; border-color:#b7e3b7; }
-    .bad { background:#ffecec; border-color:#f0b4b4; }
-    .warn { background:#fff6dc; border-color:#ecd79a; }
-    .small { font-size: 12px; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-    .row { display:flex; gap:10px; flex-wrap: wrap; align-items:center; }
-    select { padding:6px 8px; border-radius:8px; border:1px solid #ddd; }
-    button { padding:6px 10px; border-radius:8px; border:1px solid #ddd; background:#fff; cursor:pointer; }
-    button:hover { background:#f7f7f7; }
+    body { font-family: Arial, sans-serif; margin: 20px; color: #222; }
+    h1 { margin-bottom: 4px; }
+    .muted { color:#666; font-size: 14px; }
+    .card { border:1px solid #ddd; border-radius:10px; padding:12px; margin:12px 0; }
+    .row { display:flex; gap:10px; flex-wrap:wrap; }
+    .pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; background:#eee; }
+    .pill.ok { background:#dff5e1; color:#176b2a; }
+    .pill.bad { background:#fde3e3; color:#9a1f1f; }
+    .pill.warn { background:#fff2cc; color:#6d5b00; }
+    .grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap:8px; }
+    .kv { background:#fafafa; border:1px solid #eee; border-radius:8px; padding:8px; }
+    .kv b { display:block; font-size:12px; color:#666; margin-bottom:3px; }
+    pre { background:#0f172a; color:#e2e8f0; padding:12px; border-radius:8px; overflow:auto; font-size:12px; }
+    table { border-collapse: collapse; width:100%; margin-top:8px; }
+    th, td { border:1px solid #ddd; padding:6px; font-size:13px; text-align:left; }
+    th { background:#f5f5f5; }
+    .campaign { border-left:4px solid #ccc; }
+    .campaign.active { border-left-color:#2563eb; }
+    .campaign.won { border-left-color:#16a34a; }
+    .campaign.expired { border-left-color:#dc2626; }
+    .small { font-size:12px; }
+    .jogos code { display:block; margin:2px 0; background:#f7f7f7; padding:4px 6px; border-radius:6px; }
   </style>
 </head>
 <body>
   <h1>Lotofácil ABCD</h1>
-  <div class="muted small">Lê snapshots diários em <span class="mono">docs/results/YYYY/MM/YYYY-MM-DD.json</span> e campanhas em <span class="mono">docs/state/abcd_campaigns.json</span>.</div>
+  <div class="muted">Lê snapshots diários em docs/results/YYYY/MM/YYYY-MM-DD.json e campanhas em docs/state/abcd_campaigns.json.</div>
 
-  <div class="grid" style="margin-top:16px;">
-    <div class="card">
-      <h2>Campanhas</h2>
-      <div id="campaigns_meta" class="muted small">Carregando…</div>
-      <div id="campaigns"></div>
-    </div>
+  <div class="card">
+    <h3 style="margin:0 0 8px 0;">Campanhas</h3>
+    <div id="campaignsMeta" class="muted">Carregando...</div>
+    <div id="campaignsList"></div>
+  </div>
 
-    <div class="card">
-      <h2>Snapshots por dia</h2>
-      <div class="row">
-        <label class="small muted">Dia:</label>
-        <select id="daySelect"></select>
-        <button id="loadBtn">Carregar</button>
-        <span id="snapMeta" class="small muted"></span>
-      </div>
-      <pre id="snapshot" style="margin-top:12px;">Carregando…</pre>
+  <div class="card">
+    <h3 style="margin:0 0 8px 0;">Snapshots por dia</h3>
+    <label for="daySelect">Dia:</label>
+    <div class="row" style="margin-top:6px; align-items:center;">
+      <select id="daySelect"></select>
+      <button id="loadBtn">Carregar</button>
+      <span id="snapSummary" class="muted"></span>
     </div>
+    <div id="snapEnriched"></div>
+    <pre id="snapRaw">Carregando…</pre>
   </div>
 
 <script>
-  async function jget(path) {
-    const r = await fetch(path, { cache: 'no-store' });
-    if (!r.ok) throw new Error(`HTTP ${r.status} ao ler ${path}`);
-    return await r.json();
+async function fetchJson(path) {
+  const r = await fetch(path + `?t=${Date.now()}`);
+  if (!r.ok) throw new Error(`HTTP ${r.status} ao ler ${path}`);
+  return await r.json();
+}
+
+function escapeHtml(s){
+  return String(s ?? '').replace(/[&<>\"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+
+function fmtMoney(v){
+  if (v == null || v === '') return '-';
+  const n = Number(v);
+  if (Number.isNaN(n)) return String(v);
+  return n.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+}
+
+function renderCampaigns(state){
+  const meta = document.getElementById('campaignsMeta');
+  const list = document.getElementById('campaignsList');
+  const campaigns = Array.isArray(state?.campaigns) ? state.campaigns : [];
+  const by = st => campaigns.filter(c => (c.status||'active') === st).length;
+  meta.textContent = `Atualizado: ${state?.updated_at ?? '-'} | active=${by('active')} | won=${by('won')} | expired=${by('expired')}`;
+  if (!campaigns.length){
+    list.innerHTML = '<div class="muted" style="margin-top:8px;">Nenhuma campanha cadastrada ainda.</div>';
+    return;
   }
 
-  function fmtStatus(status) {
-    if (status === "won") return `<span class="pill ok">won</span>`;
-    if (status === "expired") return `<span class="pill bad">expired</span>`;
-    return `<span class="pill warn">active</span>`;
+  const sorted = [...campaigns].sort((a,b)=> (b.start_concurso||0) - (a.start_concurso||0));
+  list.innerHTML = sorted.map(c => {
+    const sum = c.summary || {};
+    const checks = Array.isArray(c.checks) ? c.checks : [];
+    const last = checks.length ? checks[checks.length-1] : null;
+    const paying = Array.isArray(c.paying_hits_ge11) ? c.paying_hits_ge11 : [];
+    const status = c.status || 'active';
+    const endConc = c.target_end_concurso ?? ((c.target_start_concurso||0) + (c.teimosinha_n||0) - 1);
+    const offsetAtual = c.offset_atual ?? checks.length ?? 0;
+    const remaining = sum.remaining ?? Math.max((c.teimosinha_n||0) - offsetAtual, 0);
+    const lastTxt = last
+      ? `último: concurso ${last.concurso} | best_hits=${last.best_hits ?? '-'} | best_game=${last.best_game ?? '-'}${(last.total_profit!=null)?` | lucro dia=${fmtMoney(last.total_profit)}`:''}`
+      : 'último: sem checks ainda';
+
+    const payingRows = paying.length ? `
+      <table>
+        <thead><tr><th>Concurso</th><th>Seq</th><th>Jogo</th><th>Hits</th><th>Payout</th><th>Profit</th></tr></thead>
+        <tbody>
+          ${paying.slice(-10).map(e => `<tr>
+            <td>${escapeHtml(e.concurso)}</td>
+            <td>${escapeHtml(e.offset ?? e.surpresinha ?? '-')}</td>
+            <td>${escapeHtml(e.game || e.best_game || '-')}</td>
+            <td>${escapeHtml(e.hits)}</td>
+            <td>${escapeHtml(fmtMoney(e.payout))}</td>
+            <td>${escapeHtml(fmtMoney(e.profit))}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+      <div class="small muted">Mostrando até 10 eventos pagantes (>=11 hits).</div>
+    ` : '<div class="small muted">Sem eventos pagantes (>=11) até agora.</div>';
+
+    const jogos = c.jogos || {};
+    return `
+      <div class="card campaign ${status}">
+        <div><b>${escapeHtml(c.id || `c_${c.start_concurso}`)}</b></div>
+        <div><span class="pill ${status==='active'?'warn':status==='won'?'ok':'bad'}">${escapeHtml(status)}</span></div>
+        <div class="small" style="margin-top:6px;">
+          start=${escapeHtml(c.start_concurso)} → alvo_início=${escapeHtml(c.target_start_concurso)} | fim=${escapeHtml(endConc)} |
+          surpresinha ${escapeHtml(offsetAtual)}/${escapeHtml(c.teimosinha_n)} | remaining=${escapeHtml(remaining)} | min_stop=${escapeHtml(c.min_hits_stop)}
+        </div>
+        <div class="small" style="margin-top:4px;">${escapeHtml(lastTxt)}</div>
+
+        <div class="grid" style="margin-top:8px;">
+          <div class="kv"><b>Checks</b>${escapeHtml(sum.checks_count ?? checks.length ?? 0)}</div>
+          <div class="kv"><b>Best hits</b>${escapeHtml(sum.best_hits_ate_agora ?? '-')}</div>
+          <div class="kv"><b>Best jogo</b>${escapeHtml(sum.best_game_ate_agora ?? '-')}</div>
+          <div class="kv"><b>Best concurso</b>${escapeHtml(sum.best_concurso_ate_agora ?? '-')}</div>
+          <div class="kv"><b>Eventos >=11</b>${escapeHtml(sum.eventos_pagantes_ge11 ?? paying.length ?? 0)}</div>
+          <div class="kv"><b>Custo total</b>${escapeHtml(fmtMoney(sum.custo_total))}</div>
+          <div class="kv"><b>Payout total</b>${escapeHtml(fmtMoney(sum.payout_total))}</div>
+          <div class="kv"><b>Profit total</b>${escapeHtml(fmtMoney(sum.profit_total))}</div>
+        </div>
+
+        <div style="margin-top:8px;"><b>Jogos:</b></div>
+        <div class="jogos small">
+          ${Object.entries(jogos).map(([k,v]) => `<code>${escapeHtml(k)}: ${escapeHtml(v)}</code>`).join('')}
+        </div>
+
+        <div style="margin-top:8px;"><b>Eventos pagantes (>=11):</b></div>
+        ${payingRows}
+      </div>`;
+  }).join('');
+}
+
+function renderSnapshotEnriched(snap){
+  const box = document.getElementById('snapEnriched');
+  const gate = snap.gate || {};
+  const cfg = snap.config || {};
+  const diag = gate.diag || gate; // compat
+  const resume = snap.campaigns_resume || {};
+  const opened = Array.isArray(snap.opened_campaigns_today) ? snap.opened_campaigns_today : [];
+  const updates = Array.isArray(snap.campaign_updates_today) ? snap.campaign_updates_today : [];
+
+  box.innerHTML = `
+    <div class="grid" style="margin-top:8px;">
+      <div class="kv"><b>Concurso</b>${escapeHtml(snap.last_concurso)}</div>
+      <div class="kv"><b>Data</b>${escapeHtml(snap.last_data)}</div>
+      <div class="kv"><b>Gate PASS</b>${snap.gate_pass ? '<span class="pill ok">true</span>' : '<span class="pill bad">false</span>'}</div>
+      <div class="kv"><b>Gap atual</b>${escapeHtml(gate.gap_atual)}</div>
+      <div class="kv"><b>Faixa gate</b>${escapeHtml((gate.faixa||[]).join(' .. '))}</div>
+      <div class="kv"><b>Teimosinha</b>${escapeHtml(cfg.teimosinha_n ?? '-')}</div>
+      <div class="kv"><b>Min stop</b>${escapeHtml(cfg.min_hits_stop ?? '-')}</div>
+      <div class="kv"><b>Gap dentro teimosinha</b>${('gap_dentro_teimosinha' in snap) ? escapeHtml(String(snap.gap_dentro_teimosinha)) : '-'}</div>
+      <div class="kv"><b>Último PASS concurso</b>${escapeHtml(gate.ultimo_pass_concurso ?? '-')}</div>
+      <div class="kv"><b>Desde último PASS</b>${escapeHtml(gate.concursos_desde_ultimo_pass ?? '-')}</div>
+      <div class="kv"><b>P90 / P95 / MAX</b>${escapeHtml(`${gate.p90 ?? '-'} / ${gate.p95 ?? '-'} / ${gate.max_gap_historico ?? '-'}`)}</div>
+      <div class="kv"><b>Amostras gap</b>${escapeHtml(gate.amostras_gap ?? '-')}</div>
+    </div>
+
+    <div class="grid" style="margin-top:8px;">
+      <div class="kv"><b>Campanhas active/won/expired</b>${escapeHtml(`${resume.active ?? 0}/${resume.won ?? 0}/${resume.expired ?? 0}`)}</div>
+      <div class="kv"><b>Abertas hoje</b>${escapeHtml(opened.length)}</div>
+      <div class="kv"><b>Atualizadas hoje</b>${escapeHtml(updates.length)}</div>
+    </div>
+
+    ${opened.length ? `<div class="card"><b>Campanhas abertas hoje</b><div class="small">${opened.map(c=>`${c.id || 'campanha'} (start=${c.start_concurso} → ${c.target_start_concurso})`).join('<br>')}</div></div>` : ''}
+    ${updates.length ? `<div class="card"><b>Checks de campanhas hoje</b>
+      <table><thead><tr><th>Campanha</th><th>Concurso</th><th>Seq</th><th>Best hits</th><th>Best jogo</th><th>Lucro dia</th></tr></thead><tbody>
+      ${updates.map(u => `<tr><td>${escapeHtml(u.campaign_id || u.id || '-')}</td><td>${escapeHtml(u.concurso || '-')}</td><td>${escapeHtml(u.offset ?? '-')}</td><td>${escapeHtml(u.best_hits ?? '-')}</td><td>${escapeHtml(u.best_game ?? '-')}</td><td>${escapeHtml(fmtMoney(u.total_profit))}</td></tr>`).join('')}
+      </tbody></table></div>` : ''}
+  `;
+}
+
+async function loadCampaigns(){
+  try {
+    const st = await fetchJson('./state/abcd_campaigns.json');
+    renderCampaigns(st);
+  } catch (e) {
+    document.getElementById('campaignsMeta').textContent = 'Não consegui ler state/abcd_campaigns.json';
+    document.getElementById('campaignsList').innerHTML = `<div class="muted">Error: ${escapeHtml(e.message)}</div>`;
   }
+}
 
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-  }
+async function loadManifestAndDays(){
+  const man = await fetchJson('./results/manifest.json');
+  const files = Array.isArray(man.files) ? man.files : [];
+  const normalized = files
+    .filter(f => /\d{4}-\d{2}-\d{2}\.json$/i.test(f) && !f.endsWith('_signal.json') && !f.endsWith('manifest.json'))
+    .sort()
+    .reverse();
+  const sel = document.getElementById('daySelect');
+  sel.innerHTML = '';
+  normalized.forEach(f => {
+    const m = f.match(/(\d{4}-\d{2}-\d{2})\.json$/);
+    const day = m ? m[1] : f;
+    const o = document.createElement('option');
+    o.value = f;
+    o.textContent = day;
+    sel.appendChild(o);
+  });
+  if (normalized.length) await loadSnapshot(normalized[0]);
+  else document.getElementById('snapRaw').textContent = 'Nenhum snapshot encontrado.';
+}
 
-  function renderCampaigns(state) {
-    const el = document.getElementById("campaigns");
-    const meta = document.getElementById("campaigns_meta");
+async function loadSnapshot(path){
+  const snap = await fetchJson('./' + path.replace(/^\.\//,''));
+  document.getElementById('snapRaw').textContent = JSON.stringify(snap, null, 2);
+  document.getElementById('snapSummary').textContent = `gate_pass=${snap.gate_pass} | last_concurso=${snap.last_concurso} | gap=${snap?.gate?.gap_atual}`;
+  renderSnapshotEnriched(snap);
+}
 
-    const camps = (state && state.campaigns) ? state.campaigns : [];
-    const active = camps.filter(c => c.status === "active");
-    const won = camps.filter(c => c.status === "won");
-    const exp = camps.filter(c => c.status === "expired");
+document.getElementById('loadBtn').addEventListener('click', async () => {
+  const v = document.getElementById('daySelect').value;
+  if (v) await loadSnapshot(v);
+});
 
-    meta.textContent = `Atualizado: ${state.updated_at || "?"} | active=${active.length} | won=${won.length} | expired=${exp.length}`;
-
-    if (!camps.length) {
-      el.innerHTML = `<div class="muted small">Nenhuma campanha cadastrada ainda.</div>`;
-      return;
-    }
-
-    const rows = camps
-      .sort((a,b) => (b.start_concurso||0) - (a.start_concurso||0))
-      .map(c => {
-        const checks = c.checks || [];
-        const done = checks.length;
-        const total = c.teimosinha_n || 0;
-        const rem = Math.max(0, total - done);
-        const last = checks.length ? checks[checks.length-1] : null;
-
-        const jogos = c.jogos || {};
-        const jogosHtml = Object.entries(jogos).map(([k,v]) =>
-          `<div class="mono small">${escapeHtml(k)}: ${escapeHtml(v)}</div>`
-        ).join("");
-
-        let lastHtml = `<span class="muted small">sem checks ainda</span>`;
-        if (last) {
-          lastHtml = `<span class="mono small">concurso ${last.concurso} | best_hits=${last.best_hits} | best_game=${escapeHtml(last.best_game)}</span>`;
-        }
-
-        let winHtml = "";
-        if (c.status === "won" && c.won) {
-          winHtml = `<div class="small">✅ ganhou no concurso <b>${c.won.when_concurso}</b> com <b>${c.won.best_hits}</b> hits (${escapeHtml(c.won.best_game)})</div>`;
-        }
-
-        return `
-          <div style="border-top:1px solid #eee; padding-top:10px; margin-top:10px;">
-            <div class="row">
-              <div class="mono"><b>${escapeHtml(c.id)}</b></div>
-              ${fmtStatus(c.status)}
-            </div>
-            <div class="small">
-              start=<b>${c.start_concurso}</b> → alvo_início=<b>${c.target_start_concurso}</b>
-              | surpresinha <b>${done}/${total}</b> | remaining=<b>${rem}</b> | min_stop=<b>${c.min_hits_stop}</b>
-            </div>
-            <div class="small">último: ${lastHtml}</div>
-            ${winHtml}
-            <div class="small muted" style="margin-top:6px;">Jogos:</div>
-            ${jogosHtml || `<div class="muted small">sem jogos no JSON</div>`}
-          </div>
-        `;
-      }).join("");
-
-    el.innerHTML = rows;
-  }
-
-  async function loadCampaigns() {
-    const meta = document.getElementById("campaigns_meta");
-    const box  = document.getElementById("campaigns");
-
-    try {
-      const r = await fetch("./state/abcd_campaigns.json", { cache: 'no-store' });
-
-      if (r.status === 404) {
-        meta.textContent = "Nenhuma campanha ainda (state/abcd_campaigns.json não existe).";
-        box.innerHTML = `<div class="muted small">Crie <span class="mono">docs/state/abcd_campaigns.json</span> com campaigns=[] ou rode o workflow pelo menos uma vez.</div>`;
-        return;
-      }
-
-      if (!r.ok) throw new Error(`HTTP ${r.status} ao ler ./state/abcd_campaigns.json`);
-      const state = await r.json();
-      renderCampaigns(state);
-    } catch (e) {
-      meta.textContent = "Falha ao carregar campanhas.";
-      box.innerHTML = `<div class="mono small" style="color:#b00;">${escapeHtml(e)}</div>`;
-    }
-  }
-
-
-  async function loadManifest() {
-    // manifest com lista de dias disponíveis
-    const man = await jget("./results/manifest.json");
-    return man.days || [];
-  }
-
-  async function loadSnapshot(path) {
-    const snap = await jget(path);
-    document.getElementById("snapshot").textContent = JSON.stringify(snap, null, 2);
-    const gate = snap.gate || {};
-    document.getElementById("snapMeta").textContent =
-      `gate_pass=${snap.gate_pass} | last_concurso=${snap.last_concurso} | gap=${gate.gap_atual}`;
-  }
-
-  async function boot() {
+(async function init(){
+  try {
     await loadCampaigns();
-
-    let days = [];
-    try {
-      days = await loadManifest();
-    } catch(e) {
-      document.getElementById("snapshot").textContent = "Faltando results/manifest.json (ver step do workflow).";
-      return;
-    }
-
-    // mais recente primeiro
-    days.sort().reverse();
-
-    const sel = document.getElementById("daySelect");
-    sel.innerHTML = days.map(d => `<option value="${escapeHtml(d.path)}">${escapeHtml(d.label)}</option>`).join("");
-
-    const first = days[0];
-    if (first) await loadSnapshot(first.path);
-
-    document.getElementById("loadBtn").onclick = async () => {
-      const path = sel.value;
-      await loadSnapshot(path);
-    };
+    await loadManifestAndDays();
+  } catch (e) {
+    document.getElementById('snapRaw').textContent = 'Erro ao carregar: ' + e.message;
   }
-
-  boot();
+})();
 </script>
 </body>
 </html>
