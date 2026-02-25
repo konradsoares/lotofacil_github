@@ -319,40 +319,6 @@
         "payout_total": 0.0,
         "profit_total": -14.0
       }
-    },
-    {
-      "id": "c_3620_20260225",
-      "status": "active",
-      "created_on": "2026-02-25",
-      "start_concurso": 3620,
-      "target_start_concurso": 3621,
-      "target_end_concurso": 3657,
-      "teimosinha_n": 37,
-      "min_hits_stop": 14,
-      "jogos": {
-        "jogo_A_B": "01 03 04 05 06 08 10 11 13 14 17 20 21 22 23",
-        "jogo_A_C": "01 02 03 04 05 06 10 11 13 14 20 21 23 24 25",
-        "jogo_A_D": "03 04 05 07 11 12 13 14 17 18 19 20 21 23 24",
-        "jogo_B_C_D": "01 03 05 06 07 08 10 12 13 14 17 18 19 22 24"
-      },
-      "checks": [],
-      "won": {
-        "when_concurso": null,
-        "best_hits": null,
-        "best_game": null
-      },
-      "paying_hits_ge11": [],
-      "summary": {
-        "checks_count": 0,
-        "remaining": 37,
-        "best_hits_ate_agora": null,
-        "best_game_ate_agora": null,
-        "best_concurso_ate_agora": null,
-        "eventos_pagantes_ge11": 0,
-        "custo_total": 0,
-        "payout_total": 0,
-        "profit_total": 0
-      }
     }
   ]
 }
