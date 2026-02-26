@@ -46,7 +46,7 @@ jobs:
               ok = False
               reason = "Sunday"
           else:
-              ok = (now.hour > 6) or (now.hour == 6 and now.minute >= 30)
+              ok = (now.hour > 1) or (now.hour == 1 and now.minute >= 30)
               reason = "before_04_30" if not ok else "time_ok"
 
           stamp_path = Path("docs/state/abcd_last_run.json")
