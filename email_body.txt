@@ -1,20 +1,12 @@
 Lotofácil ABCD — Resumo Diário
 
-Rodado em (Dublin 04:30+): 2026-02-25
+Rodado em (Dublin 04:30+): 2026-02-26
 Último concurso disponível: 3620 | Data: 2026-02-24
 
 gate_pass (hoje): True
 Percentis: [20.0, 79.0] | Faixa: [1.0, 138.41] | Gap atual: 135
 
 === JOGOS DO SINAL DE HOJE (JSON) ===
-  jogo_A_B: 01 03 04 05 06 08 10 11 13 14 17 20 21 22 23
-  jogo_A_C: 01 02 03 04 05 06 10 11 13 14 20 21 23 24 25
-  jogo_A_D: 03 04 05 07 11 12 13 14 17 18 19 20 21 23 24
-  jogo_B_C_D: 01 03 05 06 07 08 10 12 13 14 17 18 19 22 24
-
-=== NOVAS CAMPANHAS ABERTAS HOJE ===
-- c_3620_20260225 | start=3620 -> alvo_início=3621 | teimosinha=37 | stop_hits=14
-  Jogos:
   jogo_A_B: 01 03 04 05 06 08 10 11 13 14 17 20 21 22 23
   jogo_A_C: 01 02 03 04 05 06 10 11 13 14 20 21 23 24 25
   jogo_A_D: 03 04 05 07 11 12 13 14 17 18 19 20 21 23 24

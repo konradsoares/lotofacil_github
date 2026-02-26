@@ -1,10 +1,10 @@
 {
-  "run_ymd": "2026-02-25",
+  "run_ymd": "2026-02-26",
   "last_concurso_json": 3620,
   "latest_concurso_xlsx": 3620,
   "gate_pass": true,
   "email": true,
-  "opened": 1,
+  "opened": 0,
   "active": 4,
   "won": 0,
   "expired": 0
