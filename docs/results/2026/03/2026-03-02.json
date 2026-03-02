@@ -1,0 +1,460 @@
+{
+  "last_concurso": 3624,
+  "last_data": "2026-02-28",
+  "gate": {
+    "metric": "concursos",
+    "percentis": [
+      20.0,
+      79.0
+    ],
+    "faixa": [
+      1.0,
+      138.41
+    ],
+    "gap_atual": 139,
+    "pass": false
+  },
+  "gate_pass": false,
+  "jogos": {
+    "jogo_A_B": "01 03 04 06 07 08 09 10 11 14 15 17 19 20 21",
+    "jogo_A_C": "01 02 03 04 05 06 09 10 11 12 13 14 20 24 25",
+    "jogo_A_D": "03 04 05 06 07 09 11 12 13 14 17 18 20 24 25",
+    "jogo_B_C_D": "01 03 05 07 08 10 12 13 14 15 17 18 19 21 24"
+  },
+  "config": {
+    "teimosinha_n": 37,
+    "min_hits_stop": 14,
+    "gate_percentis": "20,79"
+  },
+  "gap_dentro_teimosinha": false,
+  "campaigns_resume": {
+    "active": 7,
+    "won": 0,
+    "expired": 0,
+    "active_ids": [
+      "c_3617_20260221",
+      "c_3618_20260223",
+      "c_3619_20260224",
+      "c_3620_20260225",
+      "c_3621_20260226",
+      "c_3622_20260227",
+      "c_3623_20260228"
+    ]
+  },
+  "campaign_updates_today": [
+    {
+      "campaign_id": "c_3617_20260221",
+      "id": "c_3617_20260221",
+      "concurso": 3624,
+      "data": "2026-02-28",
+      "offset": 7,
+      "best_hits": 10,
+      "best_game": "jogo_A_C",
+      "best_payout": 0.0,
+      "total_cost": 14.0,
+      "total_payout": 0.0,
+      "total_profit": -14.0,
+      "check": {
+        "concurso": 3624,
+        "data": "2026-02-28",
+        "offset": 7,
+        "best_hits": 10,
+        "best_game": "jogo_A_C",
+        "best_payout": 0.0,
+        "per_game": [
+          {
+            "game": "jogo_A_B",
+            "hits": 9,
+            "payout": 0.0,
+            "cost": 3.5,
+            "profit": -3.5
+          },
+          {
+            "game": "jogo_A_C",
+            "hits": 10,
+            "payout": 0.0,
+            "cost": 3.5,
+            "profit": -3.5
+          },
+          {
+            "game": "jogo_A_D",
+            "hits": 9,
+            "payout": 0.0,
+            "cost": 3.5,
+            "profit": -3.5
+          },
+          {
+            "game": "jogo_B_C_D",
+            "hits": 9,
+            "payout": 0.0,
+            "cost": 3.5,
+            "profit": -3.5
+          }
+        ],
+        "paying_events": [],
+        "total_cost": 14.0,
+        "total_payout": 0.0,
+        "total_profit": -14.0,
+        "cost_total": 14.0,
+        "payout_total": 0.0,
+        "profit_total": -14.0
+      }
+    },
+    {
+      "campaign_id": "c_3618_20260223",
+      "id": "c_3618_20260223",
+      "concurso": 3624,
+      "data": "2026-02-28",
+      "offset": 6,
+      "best_hits": 10,
+      "best_game": "jogo_A_C",
+      "best_payout": 0.0,
+      "total_cost": 14.0,
+      "total_payout": 0.0,
+      "total_profit": -14.0,
+      "check": {
+        "concurso": 3624,
+        "data": "2026-02-28",
+        "offset": 6,
+        "best_hits": 10,
+        "best_game": "jogo_A_C",
+        "best_payout": 0.0,
+        "per_game": [
+          {
+            "game": "jogo_A_B",
+            "hits": 9,
+            "payout": 0.0,
+            "cost": 3.5,
+            "profit": -3.5
+          },
+          {
+            "game": "jogo_A_C",
+            "hits": 10,
+            "payout": 0.0,
+            "cost": 3.5,
+            "profit": -3.5
+          },
+          {
+            "game": "jogo_A_D",
+            "hits": 9,
+            "payout": 0.0,
+            "cost": 3.5,
+            "profit": -3.5
+          },
+          {
+            "game": "jogo_B_C_D",
+            "hits": 8,
+            "payout": 0.0,
+            "cost": 3.5,
+            "profit": -3.5
+          }
+        ],
+        "paying_events": [],
+        "total_cost": 14.0,
+        "total_payout": 0.0,
+        "total_profit": -14.0,
+        "cost_total": 14.0,
+        "payout_total": 0.0,
+        "profit_total": -14.0
+      }
+    },
+    {
+      "campaign_id": "c_3619_20260224",
+      "id": "c_3619_20260224",
+      "concurso": 3624,
+      "data": "2026-02-28",
+      "offset": 5,
+      "best_hits": 10,
+      "best_game": "jogo_A_B",
+      "best_payout": 0.0,
+      "total_cost": 14.0,
+      "total_payout": 0.0,
+      "total_profit": -14.0,
+      "check": {
+        "concurso": 3624,
+        "data": "2026-02-28",
+        "offset": 5,
+        "best_hits": 10,
+        "best_game": "jogo_A_B",
+        "best_payout": 0.0,
+        "per_game": [
+          {
+            "game": "jogo_A_B",
+            "hits": 10,
+            "payout": 0.0,
+            "cost": 3.5,
+            "profit": -3.5
+          },
+          {
+            "game": "jogo_A_C",
+            "hits": 10,
+            "payout": 0.0,
+            "cost": 3.5,
+            "profit": -3.5
+          },
+          {
+            "game": "jogo_A_D",
+            "hits": 8,
+            "payout": 0.0,
+            "cost": 3.5,
+            "profit": -3.5
+          },
+          {
+            "game": "jogo_B_C_D",
+            "hits": 8,
+            "payout": 0.0,
+            "cost": 3.5,
+            "profit": -3.5
+          }
+        ],
+        "paying_events": [],
+        "total_cost": 14.0,
+        "total_payout": 0.0,
+        "total_profit": -14.0,
+        "cost_total": 14.0,
+        "payout_total": 0.0,
+        "profit_total": -14.0
+      }
+    },
+    {
+      "campaign_id": "c_3620_20260225",
+      "id": "c_3620_20260225",
+      "concurso": 3624,
+      "data": "2026-02-28",
+      "offset": 4,
+      "best_hits": 10,
+      "best_game": "jogo_A_C",
+      "best_payout": 0.0,
+      "total_cost": 14.0,
+      "total_payout": 0.0,
+      "total_profit": -14.0,
+      "check": {
+        "concurso": 3624,
+        "data": "2026-02-28",
+        "offset": 4,
+        "best_hits": 10,
+        "best_game": "jogo_A_C",
+        "best_payout": 0.0,
+        "per_game": [
+          {
+            "game": "jogo_A_B",
+            "hits": 8,
+            "payout": 0.0,
+            "cost": 3.5,
+            "profit": -3.5
+          },
+          {
+            "game": "jogo_A_C",
+            "hits": 10,
+            "payout": 0.0,
+            "cost": 3.5,
+            "profit": -3.5
+          },
+          {
+            "game": "jogo_A_D",
+            "hits": 8,
+            "payout": 0.0,
+            "cost": 3.5,
+            "profit": -3.5
+          },
+          {
+            "game": "jogo_B_C_D",
+            "hits": 8,
+            "payout": 0.0,
+            "cost": 3.5,
+            "profit": -3.5
+          }
+        ],
+        "paying_events": [],
+        "total_cost": 14.0,
+        "total_payout": 0.0,
+        "total_profit": -14.0,
+        "cost_total": 14.0,
+        "payout_total": 0.0,
+        "profit_total": -14.0
+      }
+    },
+    {
+      "campaign_id": "c_3621_20260226",
+      "id": "c_3621_20260226",
+      "concurso": 3624,
+      "data": "2026-02-28",
+      "offset": 3,
+      "best_hits": 10,
+      "best_game": "jogo_A_C",
+      "best_payout": 0.0,
+      "total_cost": 14.0,
+      "total_payout": 0.0,
+      "total_profit": -14.0,
+      "check": {
+        "concurso": 3624,
+        "data": "2026-02-28",
+        "offset": 3,
+        "best_hits": 10,
+        "best_game": "jogo_A_C",
+        "best_payout": 0.0,
+        "per_game": [
+          {
+            "game": "jogo_A_B",
+            "hits": 8,
+            "payout": 0.0,
+            "cost": 3.5,
+            "profit": -3.5
+          },
+          {
+            "game": "jogo_A_C",
+            "hits": 10,
+            "payout": 0.0,
+            "cost": 3.5,
+            "profit": -3.5
+          },
+          {
+            "game": "jogo_A_D",
+            "hits": 9,
+            "payout": 0.0,
+            "cost": 3.5,
+            "profit": -3.5
+          },
+          {
+            "game": "jogo_B_C_D",
+            "hits": 8,
+            "payout": 0.0,
+            "cost": 3.5,
+            "profit": -3.5
+          }
+        ],
+        "paying_events": [],
+        "total_cost": 14.0,
+        "total_payout": 0.0,
+        "total_profit": -14.0,
+        "cost_total": 14.0,
+        "payout_total": 0.0,
+        "profit_total": -14.0
+      }
+    },
+    {
+      "campaign_id": "c_3622_20260227",
+      "id": "c_3622_20260227",
+      "concurso": 3624,
+      "data": "2026-02-28",
+      "offset": 2,
+      "best_hits": 11,
+      "best_game": "jogo_A_B",
+      "best_payout": 7.0,
+      "total_cost": 14.0,
+      "total_payout": 7.0,
+      "total_profit": -7.0,
+      "check": {
+        "concurso": 3624,
+        "data": "2026-02-28",
+        "offset": 2,
+        "best_hits": 11,
+        "best_game": "jogo_A_B",
+        "best_payout": 7.0,
+        "per_game": [
+          {
+            "game": "jogo_A_B",
+            "hits": 11,
+            "payout": 7.0,
+            "cost": 3.5,
+            "profit": 3.5
+          },
+          {
+            "game": "jogo_A_C",
+            "hits": 10,
+            "payout": 0.0,
+            "cost": 3.5,
+            "profit": -3.5
+          },
+          {
+            "game": "jogo_A_D",
+            "hits": 9,
+            "payout": 0.0,
+            "cost": 3.5,
+            "profit": -3.5
+          },
+          {
+            "game": "jogo_B_C_D",
+            "hits": 9,
+            "payout": 0.0,
+            "cost": 3.5,
+            "profit": -3.5
+          }
+        ],
+        "paying_events": [
+          {
+            "game": "jogo_A_B",
+            "hits": 11,
+            "payout": 7.0,
+            "cost": 3.5,
+            "profit": 3.5
+          }
+        ],
+        "total_cost": 14.0,
+        "total_payout": 7.0,
+        "total_profit": -7.0,
+        "cost_total": 14.0,
+        "payout_total": 7.0,
+        "profit_total": -7.0
+      }
+    },
+    {
+      "campaign_id": "c_3623_20260228",
+      "id": "c_3623_20260228",
+      "concurso": 3624,
+      "data": "2026-02-28",
+      "offset": 1,
+      "best_hits": 10,
+      "best_game": "jogo_A_C",
+      "best_payout": 0.0,
+      "total_cost": 14.0,
+      "total_payout": 0.0,
+      "total_profit": -14.0,
+      "check": {
+        "concurso": 3624,
+        "data": "2026-02-28",
+        "offset": 1,
+        "best_hits": 10,
+        "best_game": "jogo_A_C",
+        "best_payout": 0.0,
+        "per_game": [
+          {
+            "game": "jogo_A_B",
+            "hits": 9,
+            "payout": 0.0,
+            "cost": 3.5,
+            "profit": -3.5
+          },
+          {
+            "game": "jogo_A_C",
+            "hits": 10,
+            "payout": 0.0,
+            "cost": 3.5,
+            "profit": -3.5
+          },
+          {
+            "game": "jogo_A_D",
+            "hits": 9,
+            "payout": 0.0,
+            "cost": 3.5,
+            "profit": -3.5
+          },
+          {
+            "game": "jogo_B_C_D",
+            "hits": 8,
+            "payout": 0.0,
+            "cost": 3.5,
+            "profit": -3.5
+          }
+        ],
+        "paying_events": [],
+        "total_cost": 14.0,
+        "total_payout": 0.0,
+        "total_profit": -14.0,
+        "cost_total": 14.0,
+        "payout_total": 0.0,
+        "profit_total": -14.0
+      }
+    }
+  ]
+}
