@@ -1,71 +1,71 @@
 Lotofácil ABCD — Resumo Diário
 
-Rodado em (Dublin 04:30+): 2026-03-03
-Último concurso disponível: 3625 | Data: 2026-03-02
+Rodado em (Dublin 04:30+): 2026-03-04
+Último concurso disponível: 3626 | Data: 2026-03-03
 
 gate_pass (hoje): False
-Percentis: [20.0, 79.0] | Faixa: [1.0, 138.41] | Gap atual: 140
+Percentis: [20.0, 79.0] | Faixa: [1.0, 138.41] | Gap atual: 141
 
 === JOGOS DO SINAL DE HOJE (JSON) ===
-  jogo_A_B: 01 02 03 04 05 06 07 08 09 10 11 12 14 20 22
+  jogo_A_B: 01 02 04 05 06 08 09 11 12 14 19 20 22 23 24
   jogo_A_C: 01 02 03 04 05 06 09 10 11 12 13 14 20 24 25
-  jogo_A_D: 03 04 05 06 07 08 09 11 12 13 14 17 18 20 25
-  jogo_B_C_D: 01 02 03 05 07 08 10 12 13 14 17 18 22 24 25
+  jogo_A_D: 03 04 05 06 08 09 11 12 13 14 17 18 20 24 25
+  jogo_B_C_D: 01 03 05 08 10 12 13 14 17 18 19 22 23 24 25
 
 === CHECKS DE HOJE (por campanha) ===
-- c_3617_20260221 | concurso 3625 | best_hits=9 | best_game=jogo_A_B | dia profit=-14.00
-- c_3618_20260223 | concurso 3625 | best_hits=10 | best_game=jogo_A_B | dia profit=-14.00
-- c_3619_20260224 | concurso 3625 | best_hits=8 | best_game=jogo_A_C | dia profit=-14.00
-- c_3620_20260225 | concurso 3625 | best_hits=8 | best_game=jogo_A_B | dia profit=-14.00
-- c_3621_20260226 | concurso 3625 | best_hits=10 | best_game=jogo_B_C_D | dia profit=-14.00
-- c_3622_20260227 | concurso 3625 | best_hits=10 | best_game=jogo_A_B | dia profit=-14.00
-- c_3623_20260228 | concurso 3625 | best_hits=10 | best_game=jogo_A_B | dia profit=-14.00
+- c_3617_20260221 | concurso 3626 | best_hits=10 | best_game=jogo_A_B | dia profit=-14.00
+- c_3618_20260223 | concurso 3626 | best_hits=10 | best_game=jogo_A_B | dia profit=-14.00
+- c_3619_20260224 | concurso 3626 | best_hits=10 | best_game=jogo_B_C_D | dia profit=-14.00
+- c_3620_20260225 | concurso 3626 | best_hits=9 | best_game=jogo_A_C | dia profit=-14.00
+- c_3621_20260226 | concurso 3626 | best_hits=10 | best_game=jogo_A_C | dia profit=-14.00
+- c_3622_20260227 | concurso 3626 | best_hits=10 | best_game=jogo_A_C | dia profit=-14.00
+- c_3623_20260228 | concurso 3626 | best_hits=10 | best_game=jogo_A_B | dia profit=-14.00
 
 === CAMPANHAS ATIVAS (LEMBRETE) ===
-- c_3617_20260221 | start=3617 -> alvo=3618 | surpresinha 8/37 | remaining=29 | acum profit=-98.00
-  último: concurso 3625 | best_hits=9 | best_game=jogo_A_B
+- c_3617_20260221 | start=3617 -> alvo=3618 | surpresinha 9/37 | remaining=28 | acum profit=-112.00
+  último: concurso 3626 | best_hits=10 | best_game=jogo_A_B
   Jogos:
   jogo_A_B: 01 02 03 04 05 06 09 14 15 17 18 20 21 23 24
   jogo_A_C: 01 02 03 04 05 06 10 11 13 14 20 21 23 24 25
   jogo_A_D: 03 04 05 06 07 12 13 14 16 17 18 20 21 23 24
   jogo_B_C_D: 01 03 05 07 09 10 11 12 13 14 15 16 17 18 24
-- c_3618_20260223 | start=3618 -> alvo=3619 | surpresinha 7/37 | remaining=30 | acum profit=-91.00
-  último: concurso 3625 | best_hits=10 | best_game=jogo_A_B
+- c_3618_20260223 | start=3618 -> alvo=3619 | surpresinha 8/37 | remaining=29 | acum profit=-105.00
+  último: concurso 3626 | best_hits=10 | best_game=jogo_A_B
   Jogos:
   jogo_A_B: 02 04 06 07 08 11 13 16 17 18 19 20 21 23 25
   jogo_A_C: 01 02 03 04 05 06 10 11 13 14 20 21 23 24 25
   jogo_A_D: 03 04 05 07 11 12 13 14 16 17 18 20 21 23 24
   jogo_B_C_D: 01 02 03 05 06 07 08 10 12 13 14 16 17 18 19
-- c_3619_20260224 | start=3619 -> alvo=3620 | surpresinha 6/37 | remaining=31 | acum profit=-84.00
-  último: concurso 3625 | best_hits=8 | best_game=jogo_A_C
+- c_3619_20260224 | start=3619 -> alvo=3620 | surpresinha 7/37 | remaining=30 | acum profit=-98.00
+  último: concurso 3626 | best_hits=10 | best_game=jogo_B_C_D
   Jogos:
   jogo_A_B: 01 02 03 04 05 06 09 11 12 15 17 20 21 22 23
   jogo_A_C: 01 02 03 04 05 06 10 11 13 14 20 21 23 24 25
   jogo_A_D: 03 04 05 07 11 12 13 14 17 18 19 20 21 23 24
   jogo_B_C_D: 01 03 05 06 07 09 10 12 13 14 15 17 18 19 22
-- c_3620_20260225 | start=3620 -> alvo=3621 | surpresinha 5/37 | remaining=32 | acum profit=-70.00
-  último: concurso 3625 | best_hits=8 | best_game=jogo_A_B
+- c_3620_20260225 | start=3620 -> alvo=3621 | surpresinha 6/37 | remaining=31 | acum profit=-84.00
+  último: concurso 3626 | best_hits=9 | best_game=jogo_A_C
   Jogos:
   jogo_A_B: 01 03 04 05 06 08 10 11 13 14 17 20 21 22 23
   jogo_A_C: 01 02 03 04 05 06 10 11 13 14 20 21 23 24 25
   jogo_A_D: 03 04 05 07 11 12 13 14 17 18 19 20 21 23 24
   jogo_B_C_D: 01 03 05 06 07 08 10 12 13 14 17 18 19 22 24
-- c_3621_20260226 | start=3621 -> alvo=3622 | surpresinha 4/37 | remaining=33 | acum profit=-56.00
-  último: concurso 3625 | best_hits=10 | best_game=jogo_B_C_D
+- c_3621_20260226 | start=3621 -> alvo=3622 | surpresinha 5/37 | remaining=32 | acum profit=-70.00
+  último: concurso 3626 | best_hits=10 | best_game=jogo_A_C
   Jogos:
   jogo_A_B: 01 02 03 04 05 08 09 11 12 14 16 17 19 20 21
   jogo_A_C: 01 02 03 04 05 06 09 10 11 13 14 20 21 24 25
   jogo_A_D: 03 04 05 07 09 11 12 13 14 16 17 18 20 21 24
   jogo_B_C_D: 01 03 05 07 08 10 12 13 14 16 17 18 19 24 25
-- c_3622_20260227 | start=3622 -> alvo=3623 | surpresinha 3/37 | remaining=34 | acum profit=-35.00
-  último: concurso 3625 | best_hits=10 | best_game=jogo_A_B
+- c_3622_20260227 | start=3622 -> alvo=3623 | surpresinha 4/37 | remaining=33 | acum profit=-49.00
+  último: concurso 3626 | best_hits=10 | best_game=jogo_A_C
   Jogos:
   jogo_A_B: 01 02 04 05 08 09 11 13 17 20 21 22 23 24 25
   jogo_A_C: 01 02 03 04 05 06 09 10 11 13 14 20 21 24 25
   jogo_A_D: 03 04 05 07 09 11 12 13 14 16 17 18 20 21 24
   jogo_B_C_D: 01 03 05 07 08 10 12 13 14 16 17 18 22 23 24
-- c_3623_20260228 | start=3623 -> alvo=3624 | surpresinha 2/37 | remaining=35 | acum profit=-28.00
-  último: concurso 3625 | best_hits=10 | best_game=jogo_A_B
+- c_3623_20260228 | start=3623 -> alvo=3624 | surpresinha 3/37 | remaining=34 | acum profit=-42.00
+  último: concurso 3626 | best_hits=10 | best_game=jogo_A_B
   Jogos:
   jogo_A_B: 01 02 03 04 05 08 09 11 15 17 18 20 21 23 25
   jogo_A_C: 01 02 03 04 05 09 10 11 12 13 14 20 21 24 25
