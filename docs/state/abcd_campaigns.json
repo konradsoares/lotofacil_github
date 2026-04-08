@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "updated_at": "2026-04-07T07:04:53Z",
+  "updated_at": "2026-04-08T07:06:58Z",
   "campaigns": [
     {
       "id": "c_3617_20260221",
-      "status": "active",
+      "status": "expired",
       "created_on": "2026-02-21",
       "start_concurso": 3617,
       "target_start_concurso": 3618,
@@ -3593,6 +3593,51 @@
           "cost_total": 14.0,
           "payout_total": 0.0,
           "profit_total": -14.0
+        },
+        {
+          "concurso": 3655,
+          "data": "2026-04-07",
+          "offset": 37,
+          "best_hits": 10,
+          "best_game": "jogo_A_C",
+          "best_payout": 0.0,
+          "per_game": [
+            {
+              "game": "jogo_A_B",
+              "hits": 9,
+              "payout": 0.0,
+              "cost": 3.5,
+              "profit": -3.5
+            },
+            {
+              "game": "jogo_A_C",
+              "hits": 10,
+              "payout": 0.0,
+              "cost": 3.5,
+              "profit": -3.5
+            },
+            {
+              "game": "jogo_A_D",
+              "hits": 9,
+              "payout": 0.0,
+              "cost": 3.5,
+              "profit": -3.5
+            },
+            {
+              "game": "jogo_B_C_D",
+              "hits": 9,
+              "payout": 0.0,
+              "cost": 3.5,
+              "profit": -3.5
+            }
+          ],
+          "paying_events": [],
+          "total_cost": 14.0,
+          "total_payout": 0.0,
+          "total_profit": -14.0,
+          "cost_total": 14.0,
+          "payout_total": 0.0,
+          "profit_total": -14.0
         }
       ],
       "won": {
@@ -3601,10 +3646,10 @@
         "best_game": null
       },
       "last_check": {
-        "concurso": 3654,
-        "data": "2026-04-06",
+        "concurso": 3655,
+        "data": "2026-04-07",
         "best_hits": 10,
-        "best_game": "jogo_A_B",
+        "best_game": "jogo_A_C",
         "total_profit": -14.0
       },
       "paying_hits_ge11": [
@@ -3770,17 +3815,17 @@
         }
       ],
       "summary": {
-        "checks_count": 35,
-        "remaining": 1,
+        "checks_count": 36,
+        "remaining": 0,
         "best_hits_ate_agora": 12,
         "best_game_ate_agora": "jogo_B_C_D",
         "best_concurso_ate_agora": 3627,
         "eventos_pagantes_ge11": 16,
-        "custo_total": 490.0,
+        "custo_total": 504.0,
         "payout_total": 133.0,
-        "profit_total": -357.0
+        "profit_total": -371.0
       },
-      "offset_atual": 36
+      "offset_atual": 37
     },
     {
       "id": "c_3619_20260224",
@@ -5430,6 +5475,59 @@
           "cost_total": 14.0,
           "payout_total": 7.0,
           "profit_total": -7.0
+        },
+        {
+          "concurso": 3655,
+          "data": "2026-04-07",
+          "offset": 36,
+          "best_hits": 11,
+          "best_game": "jogo_A_B",
+          "best_payout": 7.0,
+          "per_game": [
+            {
+              "game": "jogo_A_B",
+              "hits": 11,
+              "payout": 7.0,
+              "cost": 3.5,
+              "profit": 3.5
+            },
+            {
+              "game": "jogo_A_C",
+              "hits": 10,
+              "payout": 0.0,
+              "cost": 3.5,
+              "profit": -3.5
+            },
+            {
+              "game": "jogo_A_D",
+              "hits": 10,
+              "payout": 0.0,
+              "cost": 3.5,
+              "profit": -3.5
+            },
+            {
+              "game": "jogo_B_C_D",
+              "hits": 9,
+              "payout": 0.0,
+              "cost": 3.5,
+              "profit": -3.5
+            }
+          ],
+          "paying_events": [
+            {
+              "game": "jogo_A_B",
+              "hits": 11,
+              "payout": 7.0,
+              "cost": 3.5,
+              "profit": 3.5
+            }
+          ],
+          "total_cost": 14.0,
+          "total_payout": 7.0,
+          "total_profit": -7.0,
+          "cost_total": 14.0,
+          "payout_total": 7.0,
+          "profit_total": -7.0
         }
       ],
       "won": {
@@ -5438,8 +5536,8 @@
         "best_game": null
       },
       "last_check": {
-        "concurso": 3654,
-        "data": "2026-04-06",
+        "concurso": 3655,
+        "data": "2026-04-07",
         "best_hits": 11,
         "best_game": "jogo_A_B",
         "total_profit": -7.0
@@ -5574,20 +5672,30 @@
           "payout": 7.0,
           "cost": 3.5,
           "profit": 3.5
+        },
+        {
+          "concurso": 3655,
+          "data": "2026-04-07",
+          "offset": 36,
+          "game": "jogo_A_B",
+          "hits": 11,
+          "payout": 7.0,
+          "cost": 3.5,
+          "profit": 3.5
         }
       ],
       "summary": {
-        "checks_count": 34,
-        "remaining": 2,
+        "checks_count": 35,
+        "remaining": 1,
         "best_hits_ate_agora": 12,
         "best_game_ate_agora": "jogo_A_B",
         "best_concurso_ate_agora": 3632,
-        "eventos_pagantes_ge11": 13,
-        "custo_total": 476.0,
-        "payout_total": 112.0,
-        "profit_total": -364.0
+        "eventos_pagantes_ge11": 14,
+        "custo_total": 490.0,
+        "payout_total": 119.0,
+        "profit_total": -371.0
       },
-      "offset_atual": 35
+      "offset_atual": 36
     },
     {
       "id": "c_3620_20260225",
@@ -7167,6 +7275,51 @@
           "cost_total": 14.0,
           "payout_total": 0.0,
           "profit_total": -14.0
+        },
+        {
+          "concurso": 3655,
+          "data": "2026-04-07",
+          "offset": 35,
+          "best_hits": 10,
+          "best_game": "jogo_A_B",
+          "best_payout": 0.0,
+          "per_game": [
+            {
+              "game": "jogo_A_B",
+              "hits": 10,
+              "payout": 0.0,
+              "cost": 3.5,
+              "profit": -3.5
+            },
+            {
+              "game": "jogo_A_C",
+              "hits": 10,
+              "payout": 0.0,
+              "cost": 3.5,
+              "profit": -3.5
+            },
+            {
+              "game": "jogo_A_D",
+              "hits": 10,
+              "payout": 0.0,
+              "cost": 3.5,
+              "profit": -3.5
+            },
+            {
+              "game": "jogo_B_C_D",
+              "hits": 10,
+              "payout": 0.0,
+              "cost": 3.5,
+              "profit": -3.5
+            }
+          ],
+          "paying_events": [],
+          "total_cost": 14.0,
+          "total_payout": 0.0,
+          "total_profit": -14.0,
+          "cost_total": 14.0,
+          "payout_total": 0.0,
+          "profit_total": -14.0
         }
       ],
       "won": {
@@ -7276,23 +7429,23 @@
           "profit": 3.5
         }
       ],
-      "offset_atual": 34,
+      "offset_atual": 35,
       "summary": {
-        "checks_count": 33,
-        "remaining": 3,
+        "checks_count": 34,
+        "remaining": 2,
         "best_hits_ate_agora": 12,
         "best_game_ate_agora": "jogo_A_C",
         "best_concurso_ate_agora": 3644,
         "eventos_pagantes_ge11": 10,
-        "custo_total": 462.0,
+        "custo_total": 476.0,
         "payout_total": 77.0,
-        "profit_total": -385.0
+        "profit_total": -399.0
       },
       "last_check": {
-        "concurso": 3654,
-        "data": "2026-04-06",
+        "concurso": 3655,
+        "data": "2026-04-07",
         "best_hits": 10,
-        "best_game": "jogo_A_C",
+        "best_game": "jogo_A_B",
         "total_profit": -14.0
       }
     },
@@ -8814,6 +8967,51 @@
           "cost_total": 14.0,
           "payout_total": 0.0,
           "profit_total": -14.0
+        },
+        {
+          "concurso": 3655,
+          "data": "2026-04-07",
+          "offset": 34,
+          "best_hits": 9,
+          "best_game": "jogo_A_B",
+          "best_payout": 0.0,
+          "per_game": [
+            {
+              "game": "jogo_A_B",
+              "hits": 9,
+              "payout": 0.0,
+              "cost": 3.5,
+              "profit": -3.5
+            },
+            {
+              "game": "jogo_A_C",
+              "hits": 9,
+              "payout": 0.0,
+              "cost": 3.5,
+              "profit": -3.5
+            },
+            {
+              "game": "jogo_A_D",
+              "hits": 8,
+              "payout": 0.0,
+              "cost": 3.5,
+              "profit": -3.5
+            },
+            {
+              "game": "jogo_B_C_D",
+              "hits": 8,
+              "payout": 0.0,
+              "cost": 3.5,
+              "profit": -3.5
+            }
+          ],
+          "paying_events": [],
+          "total_cost": 14.0,
+          "total_payout": 0.0,
+          "total_profit": -14.0,
+          "cost_total": 14.0,
+          "payout_total": 0.0,
+          "profit_total": -14.0
         }
       ],
       "won": {
@@ -8903,23 +9101,23 @@
           "profit": 10.5
         }
       ],
-      "offset_atual": 33,
+      "offset_atual": 34,
       "summary": {
-        "checks_count": 32,
-        "remaining": 4,
+        "checks_count": 33,
+        "remaining": 3,
         "best_hits_ate_agora": 12,
         "best_game_ate_agora": "jogo_A_C",
         "best_concurso_ate_agora": 3644,
         "eventos_pagantes_ge11": 8,
-        "custo_total": 448.0,
+        "custo_total": 462.0,
         "payout_total": 70.0,
-        "profit_total": -378.0
+        "profit_total": -392.0
       },
       "last_check": {
-        "concurso": 3654,
-        "data": "2026-04-06",
+        "concurso": 3655,
+        "data": "2026-04-07",
         "best_hits": 9,
-        "best_game": "jogo_A_C",
+        "best_game": "jogo_A_B",
         "total_profit": -14.0
       }
     },
@@ -10403,6 +10601,51 @@
           "cost_total": 14.0,
           "payout_total": 0.0,
           "profit_total": -14.0
+        },
+        {
+          "concurso": 3655,
+          "data": "2026-04-07",
+          "offset": 33,
+          "best_hits": 10,
+          "best_game": "jogo_A_B",
+          "best_payout": 0.0,
+          "per_game": [
+            {
+              "game": "jogo_A_B",
+              "hits": 10,
+              "payout": 0.0,
+              "cost": 3.5,
+              "profit": -3.5
+            },
+            {
+              "game": "jogo_A_C",
+              "hits": 9,
+              "payout": 0.0,
+              "cost": 3.5,
+              "profit": -3.5
+            },
+            {
+              "game": "jogo_A_D",
+              "hits": 8,
+              "payout": 0.0,
+              "cost": 3.5,
+              "profit": -3.5
+            },
+            {
+              "game": "jogo_B_C_D",
+              "hits": 9,
+              "payout": 0.0,
+              "cost": 3.5,
+              "profit": -3.5
+            }
+          ],
+          "paying_events": [],
+          "total_cost": 14.0,
+          "total_payout": 0.0,
+          "total_profit": -14.0,
+          "cost_total": 14.0,
+          "payout_total": 0.0,
+          "profit_total": -14.0
         }
       ],
       "won": {
@@ -10502,21 +10745,21 @@
           "profit": 3.5
         }
       ],
-      "offset_atual": 32,
+      "offset_atual": 33,
       "summary": {
-        "checks_count": 31,
-        "remaining": 5,
+        "checks_count": 32,
+        "remaining": 4,
         "best_hits_ate_agora": 12,
         "best_game_ate_agora": "jogo_A_B",
         "best_concurso_ate_agora": 3644,
         "eventos_pagantes_ge11": 9,
-        "custo_total": 434.0,
+        "custo_total": 448.0,
         "payout_total": 77.0,
-        "profit_total": -357.0
+        "profit_total": -371.0
       },
       "last_check": {
-        "concurso": 3654,
-        "data": "2026-04-06",
+        "concurso": 3655,
+        "data": "2026-04-07",
         "best_hits": 10,
         "best_game": "jogo_A_B",
         "total_profit": -14.0
@@ -11965,6 +12208,51 @@
           "cost_total": 14.0,
           "payout_total": 0.0,
           "profit_total": -14.0
+        },
+        {
+          "concurso": 3655,
+          "data": "2026-04-07",
+          "offset": 32,
+          "best_hits": 9,
+          "best_game": "jogo_A_B",
+          "best_payout": 0.0,
+          "per_game": [
+            {
+              "game": "jogo_A_B",
+              "hits": 9,
+              "payout": 0.0,
+              "cost": 3.5,
+              "profit": -3.5
+            },
+            {
+              "game": "jogo_A_C",
+              "hits": 9,
+              "payout": 0.0,
+              "cost": 3.5,
+              "profit": -3.5
+            },
+            {
+              "game": "jogo_A_D",
+              "hits": 8,
+              "payout": 0.0,
+              "cost": 3.5,
+              "profit": -3.5
+            },
+            {
+              "game": "jogo_B_C_D",
+              "hits": 8,
+              "payout": 0.0,
+              "cost": 3.5,
+              "profit": -3.5
+            }
+          ],
+          "paying_events": [],
+          "total_cost": 14.0,
+          "total_payout": 0.0,
+          "total_profit": -14.0,
+          "cost_total": 14.0,
+          "payout_total": 0.0,
+          "profit_total": -14.0
         }
       ],
       "won": {
@@ -12074,22 +12362,22 @@
           "profit": 3.5
         }
       ],
-      "offset_atual": 31,
+      "offset_atual": 32,
       "summary": {
-        "checks_count": 30,
-        "remaining": 6,
+        "checks_count": 31,
+        "remaining": 5,
         "best_hits_ate_agora": 12,
         "best_game_ate_agora": "jogo_A_C",
         "best_concurso_ate_agora": 3644,
         "eventos_pagantes_ge11": 10,
-        "custo_total": 420.0,
+        "custo_total": 434.0,
         "payout_total": 77.0,
-        "profit_total": -343.0
+        "profit_total": -357.0
       },
       "last_check": {
-        "concurso": 3654,
-        "data": "2026-04-06",
-        "best_hits": 10,
+        "concurso": 3655,
+        "data": "2026-04-07",
+        "best_hits": 9,
         "best_game": "jogo_A_B",
         "total_profit": -14.0
       }
