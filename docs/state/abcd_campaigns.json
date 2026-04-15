@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-04-14T07:18:11Z",
+  "updated_at": "2026-04-15T07:18:43Z",
   "campaigns": [
     {
       "id": "c_3617_20260221",
@@ -11325,7 +11325,7 @@
     },
     {
       "id": "c_3623_20260228",
-      "status": "active",
+      "status": "expired",
       "created_on": "2026-02-28",
       "start_concurso": 3623,
       "target_start_concurso": 3624,
